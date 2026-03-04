@@ -1,12 +1,13 @@
 import { Badge } from '../../ui'
 import type { ActivityLog, LogLevel } from '../../../types'
+import { CheckCircle2, XCircle, AlertCircle, Info, Loader2 } from 'lucide-react'
 
-const dotColors: Record<LogLevel, string> = {
-  success: 'bg-green-500',
-  error: 'bg-red-500',
-  warning: 'bg-yellow-500',
-  info: 'bg-blue-500',
-  pending: 'bg-orange-400 animate-pulse',
+const statusIcons: Record<LogLevel, any> = {
+  success: { icon: CheckCircle2, color: 'text-green-500' },
+  error: { icon: XCircle, color: 'text-red-500' },
+  warning: { icon: AlertCircle, color: 'text-yellow-500' },
+  info: { icon: Info, color: 'text-blue-500' },
+  pending: { icon: Loader2, color: 'text-orange-400 animate-spin' },
 }
 
 const badgeColors: Record<string, 'success' | 'error' | 'warning' | 'info' | 'default'> = {
@@ -29,8 +30,11 @@ export function ActivityItem({ log }: ActivityItemProps) {
   return (
     <div className="flex gap-4">
       <div className="flex flex-col items-center">
-        <span className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${dotColors[log.level]}`} />
-        <div className="w-px flex-1 bg-surface-variant mt-1" />
+        {(() => {
+          const { icon: Icon, color } = statusIcons[log.level]
+          return <Icon size={14} strokeWidth={3} className={`mt-1.5 flex-shrink-0 ${color}`} />
+        })()}
+        <div className="w-px flex-1 bg-surface-variant mt-2" />
       </div>
       <div className="pb-4 flex-1">
         <p className="text-xs text-surface-on-variant mb-1">{time}</p>

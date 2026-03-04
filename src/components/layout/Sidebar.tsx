@@ -1,13 +1,16 @@
 import { NavLink } from 'react-router-dom'
+import { Earth, Settings } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/core'
 import { useConnectionStore } from '../../store'
 import { useConfigStore } from '../../store'
 
+import { LayoutDashboard, Activity, PlugZap, LineChart } from 'lucide-react'
+
 const navItems = [
-  { to: '/', icon: '⊞', label: 'Dashboard' },
-  { to: '/activity', icon: '⚡', label: 'Activity' },
-  { to: '/capabilities', icon: '🔌', label: 'Capabilities' },
-  { to: '/analytics', icon: '📈', label: 'Analytics' },
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/activity', icon: Activity, label: 'Activity' },
+  { to: '/capabilities', icon: PlugZap, label: 'Capabilities' },
+  { to: '/analytics', icon: LineChart, label: 'Analytics' },
 ]
 
 const statusColors: Record<string, string> = {
@@ -31,9 +34,9 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-56 h-screen bg-surface border-r border-surface-variant flex flex-col flex-shrink-0">
+    <aside className="w-64 h-screen bg-transparent flex flex-col flex-shrink-0">
       {/* Logo */}
-      <div className="p-4 border-b border-surface-variant">
+      <div className="p-4 px-6 pt-6">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white text-sm font-bold">OC</div>
           <div>
@@ -48,45 +51,43 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-2 space-y-1">
-        {navItems.map(({ to, icon, label }) => (
+        {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 ${
-                isActive
-                  ? 'bg-secondary-container text-secondary-on-container font-medium'
-                  : 'text-surface-on-variant hover:bg-surface-variant'
+              `flex items-center gap-3 px-4 py-2.5 mx-3 rounded-full text-sm font-medium transition-colors duration-150 ${isActive
+                ? 'bg-primary-container text-primary-on-container'
+                : 'text-surface-on-variant hover:bg-surface-variant hover:text-surface-on'
               }`
             }
           >
-            <span className="text-base">{icon}</span>
+            <Icon className="w-[18px] h-[18px]" strokeWidth={2.5} />
             {label}
           </NavLink>
         ))}
       </nav>
 
       {/* Bottom items */}
-      <div className="p-2 border-t border-surface-variant space-y-1">
+      <div className="p-3 space-y-1">
         <button
           onClick={openConsole}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-surface-on-variant hover:bg-surface-variant transition-colors"
+          className="w-[calc(100%-1.5rem)] mx-3 flex items-center gap-3 px-4 py-2.5 rounded-full text-sm font-medium text-surface-on-variant hover:bg-surface-variant hover:text-surface-on transition-colors"
         >
-          <span>🌐</span>
+          <Earth className="w-[18px] h-[18px]" strokeWidth={2.5} />
           云端控制台
         </button>
         <NavLink
           to="/settings"
           className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-              isActive
-                ? 'bg-secondary-container text-secondary-on-container font-medium'
-                : 'text-surface-on-variant hover:bg-surface-variant'
+            `flex items-center gap-3 px-4 py-2.5 mx-3 rounded-full text-sm font-medium transition-colors ${isActive
+              ? 'bg-primary-container text-primary-on-container'
+              : 'text-surface-on-variant hover:bg-surface-variant hover:text-surface-on'
             }`
           }
         >
-          <span>⚙️</span>
+          <Settings className="w-[18px] h-[18px]" strokeWidth={2.5} />
           Settings
         </NavLink>
       </div>
