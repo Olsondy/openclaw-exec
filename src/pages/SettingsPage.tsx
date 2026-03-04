@@ -1,92 +1,122 @@
 import { useState } from 'react'
+import { KeyRound, CheckCircle, AlertCircle, Loader2, ExternalLink, Shield } from 'lucide-react'
 import { TopBar } from '../components/layout/TopBar'
 import { Card, Button } from '../components/ui'
 import { useConfigStore, useConnectionStore } from '../store'
 import { useNodeConnection } from '../hooks/useNodeConnection'
 
 export function SettingsPage() {
-  const { config, approvalRules, setToken, setAuthEndpoint, setGatewayEndpoint, setCloudConsoleUrl, setApprovalRule } = useConfigStore()
+  const { licenseKey, setLicenseKey, userProfile, runtimeConfig, approvalRules, setApprovalRule } = useConfigStore()
   const { status, errorMessage } = useConnectionStore()
-  const { connect } = useNodeConnection()
+  const { verifyAndConnect } = useNodeConnection()
 
-  const [localToken, setLocalToken] = useState(config.token)
-  const [localAuth, setLocalAuth] = useState(config.auth_endpoint)
-  const [localGateway, setLocalGateway] = useState(config.gateway_endpoint)
-  const [localConsole, setLocalConsole] = useState(config.cloud_console_url)
+  const [localKey, setLocalKey] = useState(licenseKey)
 
-  const handleSave = async () => {
-    setToken(localToken)
-    setAuthEndpoint(localAuth)
-    setGatewayEndpoint(localGateway)
-    setCloudConsoleUrl(localConsole)
-    await connect()
+  const isLoading = status === 'auth_checking' || status === 'connecting'
+  const isOnline = status === 'online'
+
+  const handleActivate = async () => {
+    setLicenseKey(localKey)
+    await verifyAndConnect()
   }
 
-  const inputClass = 'w-full px-3 py-2 text-sm rounded-lg border border-outline bg-surface text-surface-on focus:outline-none focus:ring-2 focus:ring-primary/50'
+  const inputClass =
+    'w-full px-3 py-2 text-sm rounded-lg border border-outline bg-surface text-surface-on focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono tracking-wider'
 
   return (
     <>
-      <TopBar title="Settings" subtitle="Configure your node" />
+      <TopBar title="Settings" subtitle="激活与配置" />
       <div className="flex-1 overflow-auto p-6 space-y-4 max-w-2xl">
 
+        {/* License 激活卡片 */}
         <Card>
-          <h2 className="text-sm font-semibold text-surface-on mb-4">Node Connection</h2>
+          <div className="flex items-center gap-2 mb-4">
+            <KeyRound size={16} className="text-primary" />
+            <h2 className="text-sm font-semibold text-surface-on">License 激活</h2>
+          </div>
+
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-surface-on-variant mb-1 block">Token</label>
+              <label className="text-xs text-surface-on-variant mb-1 block">License Key</label>
               <input
                 type="password"
-                value={localToken}
-                onChange={(e) => setLocalToken(e.target.value)}
-                placeholder="输入节点 Token"
+                value={localKey}
+                onChange={(e) => setLocalKey(e.target.value)}
+                placeholder="XXXX-XXXX-XXXX-XXXX"
                 className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-surface-on-variant mb-1 block">Auth Service Endpoint</label>
-              <input
-                value={localAuth}
-                onChange={(e) => setLocalAuth(e.target.value)}
-                placeholder="https://auth.example.com/node-connect"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-surface-on-variant mb-1 block">Gateway Endpoint</label>
-              <input
-                value={localGateway}
-                onChange={(e) => setLocalGateway(e.target.value)}
-                placeholder="wss://gateway.example.com"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-surface-on-variant mb-1 block">Cloud Console URL</label>
-              <input
-                value={localConsole}
-                onChange={(e) => setLocalConsole(e.target.value)}
-                placeholder="https://console.example.com"
-                className={inputClass}
+                autoComplete="off"
+                spellCheck={false}
               />
             </div>
 
             {errorMessage && (
-              <div className="p-3 rounded-lg bg-error-container text-error-on-container text-sm">
-                {errorMessage}
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-error-container text-error-on-container text-sm">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                <span>{errorMessage}</span>
               </div>
             )}
 
             <Button
-              onClick={handleSave}
-              disabled={status === 'auth_checking' || status === 'connecting'}
+              onClick={handleActivate}
+              disabled={isLoading || !localKey.trim()}
             >
-              {status === 'auth_checking' ? '验证中...' : status === 'connecting' ? '连接中...' : '保存并连接'}
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin" />
+                  {status === 'auth_checking' ? '验证中...' : '连接中...'}
+                </span>
+              ) : isOnline ? '重新验证' : '验证并激活'}
             </Button>
           </div>
         </Card>
 
+        {/* 激活状态卡片（仅激活后显示） */}
+        {isOnline && userProfile && runtimeConfig && (
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <CheckCircle size={16} className="text-green-500" />
+              <h2 className="text-sm font-semibold text-surface-on">节点状态</h2>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-surface-on-variant">授权状态</span>
+                <span className="text-green-500 font-medium">{userProfile.licenseStatus}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-surface-on-variant">到期日期</span>
+                <span className="text-surface-on">{userProfile.expiryDate}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-surface-on-variant">设备名</span>
+                <span className="text-surface-on font-mono">{runtimeConfig.deviceName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-surface-on-variant">Agent ID</span>
+                <span className="text-surface-on font-mono text-xs truncate max-w-[200px]">{runtimeConfig.agentId}</span>
+              </div>
+              {runtimeConfig.gatewayWebUI && (
+                <div className="flex justify-between items-center">
+                  <span className="text-surface-on-variant">Cloud 控制台</span>
+                  <a
+                    href={runtimeConfig.gatewayWebUI}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-primary text-xs hover:underline"
+                  >
+                    打开 <ExternalLink size={11} />
+                  </a>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* 审批规则卡片 */}
         <Card>
-          <h2 className="text-sm font-semibold text-surface-on mb-4">Approval Rules</h2>
+          <div className="flex items-center gap-2 mb-4">
+            <Shield size={16} className="text-primary" />
+            <h2 className="text-sm font-semibold text-surface-on">审批规则</h2>
+          </div>
           <div className="space-y-3">
             {(['browser', 'system', 'vision'] as const).map((key) => (
               <div key={key} className="flex items-center justify-between">
@@ -104,6 +134,7 @@ export function SettingsPage() {
             ))}
           </div>
         </Card>
+
       </div>
     </>
   )

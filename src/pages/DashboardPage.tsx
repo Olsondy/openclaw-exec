@@ -2,22 +2,34 @@ import { TopBar } from '../components/layout/TopBar'
 import { Card } from '../components/ui'
 import { useConnectionStore, useTasksStore } from '../store'
 import { useNodeConnection } from '../hooks/useNodeConnection'
+import { CheckCircle2, AlertCircle, Clock, PauseCircle, HelpCircle, AlertTriangle, ArrowRight, ClipboardList, Percent } from 'lucide-react'
 
 const statusLabel: Record<string, string> = {
-  online: '🟢 在线',
-  connecting: '🟡 连接中',
-  auth_checking: '🟡 验证中',
-  authorized: '🟡 已授权',
-  error: '🔴 错误',
-  unauthorized: '🔴 未授权',
-  idle: '⚫ 空闲',
-  paused: '⚫ 已暂停',
+  online: '在线',
+  connecting: '连接中',
+  auth_checking: '验证中',
+  authorized: '已授权',
+  error: '错误',
+  unauthorized: '未授权',
+  idle: '空闲',
+  paused: '已暂停',
+}
+
+const statusIcons: Record<string, any> = {
+  online: CheckCircle2,
+  connecting: Clock,
+  auth_checking: Clock,
+  authorized: Clock,
+  error: AlertCircle,
+  unauthorized: AlertCircle,
+  idle: HelpCircle,
+  paused: PauseCircle,
 }
 
 export function DashboardPage() {
   const { status, onlineAt, errorMessage } = useConnectionStore()
   const { pendingApprovals, getStats } = useTasksStore()
-  const { connect } = useNodeConnection()
+  const { verifyAndConnect } = useNodeConnection()
   const stats = getStats()
 
   const uptime = onlineAt
@@ -32,26 +44,43 @@ export function DashboardPage() {
         <div className="grid grid-cols-3 gap-4">
           <Card elevated>
             <p className="text-xs text-surface-on-variant">节点状态</p>
-            <p className="text-lg font-semibold text-surface-on mt-1">{statusLabel[status] ?? status}</p>
+            <div className="flex items-center gap-2 mt-1">
+              {statusIcons[status] && (
+                (() => {
+                  const Icon = statusIcons[status];
+                  return <Icon size={20} className={status === 'error' || status === 'unauthorized' ? 'text-error' : status === 'online' ? 'text-green-500' : 'text-yellow-500'} />;
+                })()
+              )}
+              <p className="text-lg font-semibold text-surface-on">{statusLabel[status] ?? status}</p>
+            </div>
             <p className="text-xs text-surface-on-variant mt-1">在线时长：{uptime}</p>
           </Card>
           <Card elevated>
             <p className="text-xs text-surface-on-variant">今日任务</p>
-            <p className="text-lg font-semibold text-surface-on mt-1">{stats.total}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <ClipboardList size={20} className="text-primary" />
+              <p className="text-lg font-semibold text-surface-on">{stats.total}</p>
+            </div>
             <p className="text-xs text-surface-on-variant mt-1">成功 {stats.success} / 失败 {stats.error}</p>
           </Card>
           <Card elevated>
             <p className="text-xs text-surface-on-variant">成功率</p>
-            <p className="text-lg font-semibold text-surface-on mt-1">
-              {stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : '--'}%
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <Percent size={20} className="text-primary" />
+              <p className="text-lg font-semibold text-surface-on">
+                {stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : '--'}%
+              </p>
+            </div>
             <p className="text-xs text-surface-on-variant mt-1">共 {stats.total} 条任务</p>
           </Card>
         </div>
 
         {pendingApprovals.length > 0 && (
           <Card>
-            <h2 className="text-sm font-semibold text-surface-on mb-3">⚠️ 待审批操作 ({pendingApprovals.length})</h2>
+            <h2 className="text-sm font-semibold text-surface-on mb-3 flex items-center gap-2">
+              <AlertTriangle size={18} className="text-yellow-500" />
+              待审批操作 ({pendingApprovals.length})
+            </h2>
             {pendingApprovals.map(({ task, resolve }) => (
               <div key={task.task_id} className="flex items-center justify-between p-3 rounded-lg bg-surface-variant mb-2">
                 <div>
@@ -85,12 +114,13 @@ export function DashboardPage() {
 
         {(status === 'idle' || status === 'error') && (
           <Card>
-            <p className="text-sm text-surface-on-variant mb-3">节点未连接，请前往 Settings 配置 Token 后连接。</p>
+            <p className="text-sm text-surface-on-variant mb-3">节点未连接，请前往 Settings 页面输入 License Key 激活。</p>
             <button
-              onClick={connect}
-              className="text-sm text-primary hover:underline"
+              onClick={verifyAndConnect}
+              className="text-sm text-primary hover:underline flex items-center gap-1"
             >
-              立即连接 →
+              立即激活
+              <ArrowRight size={14} />
             </button>
           </Card>
         )}
