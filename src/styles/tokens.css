@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    @apply bg-background text-surface-on font-sans;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Material Ripple 基础 */
+  .ripple {
+    @apply relative overflow-hidden;
+  }
+  .ripple::after {
+    content: '';
+    @apply absolute inset-0 bg-current opacity-0 transition-opacity duration-200;
+    border-radius: inherit;
+  }
+  .ripple:active::after {
+    @apply opacity-10;
+  }
+}
