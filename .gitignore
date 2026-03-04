@@ -4,3 +4,4 @@ src-tauri/target/
 src-tauri/gen/
 sidecar/node_modules/
 sidecar/dist/
+.claude/settings.local.json
