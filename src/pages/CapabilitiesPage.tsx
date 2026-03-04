@@ -1,11 +1,52 @@
 import { TopBar } from '../components/layout/TopBar'
+import { Card, Switch } from '../components/ui'
+import { useConfigStore } from '../store'
+
+const modules = [
+  {
+    key: 'browser' as const,
+    icon: '🌐',
+    title: '浏览器自动化',
+    description: '使用 Playwright 控制 Chrome/Firefox 执行网页操作、表单填写、数据抓取',
+  },
+  {
+    key: 'system' as const,
+    icon: '🖥️',
+    title: '系统操作',
+    description: '文件管理、进程控制、执行系统命令。注意：此模块风险较高，建议设置审批规则',
+  },
+  {
+    key: 'vision' as const,
+    icon: '👁️',
+    title: '视觉/OCR',
+    description: '屏幕截图、OCR 文字识别、图像分析能力',
+  },
+]
 
 export function CapabilitiesPage() {
+  const { capabilities, toggleCapability } = useConfigStore()
+
   return (
     <>
       <TopBar title="Capabilities" subtitle="Enable or disable execution modules" />
-      <div className="flex-1 overflow-auto p-6">
-        <p className="text-surface-on-variant">Capabilities - coming soon</p>
+      <div className="flex-1 overflow-auto p-6 space-y-3 max-w-2xl">
+        {modules.map(({ key, icon, title, description }) => (
+          <Card key={key}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">{icon}</span>
+                <div>
+                  <p className="text-sm font-medium text-surface-on">{title}</p>
+                  <p className="text-xs text-surface-on-variant mt-1 leading-relaxed">{description}</p>
+                </div>
+              </div>
+              <Switch
+                checked={capabilities[key]}
+                onChange={() => toggleCapability(key)}
+              />
+            </div>
+          </Card>
+        ))}
       </div>
     </>
   )
