@@ -63,10 +63,9 @@ export function useNodeConnection() {
       setRuntimeConfig(nodeConfig)
       setUserProfile(userProfile)
 
-      if (nodeConfig.licenseId && nodeConfig.authToken) {
+      if (nodeConfig.licenseId) {
         setSessionMeta({
           licenseId: nodeConfig.licenseId,
-          authToken: nodeConfig.authToken,
           tenantUrl: nodeConfig.tenantUrl ?? '',
         })
       }

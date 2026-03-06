@@ -35,7 +35,7 @@
 └── openclaw-exec（本模块）── 桌面应用，执行本地任务
         ↑
         │ ① 首次激活 POST /api/verify → tenant
-        │   返回 gatewayUrl / authToken / licenseId
+        │   返回 gatewayUrl / gatewayToken / licenseId
         │
         │ ② wss:// 连接对应 Gateway，发送 connect 握手帧
         │   接收 node.invoke 指令 → 本地执行 → 回传结果
@@ -55,7 +55,7 @@
       { hwid, licenseKey, deviceName, publicKey }
       ↓
   Tenant 校验并返回：
-      { gatewayUrl, gatewayToken, agentId, authToken, licenseId }
+      { gatewayUrl, gatewayToken, agentId, licenseId }
       ↓
   exec 持久化至本地 config.json
 ```
@@ -81,11 +81,11 @@ Gateway 推送 node.invoke { command, args }
   → 结果回传 Gateway → AI Agent 收到执行反馈
 ```
 
-### ④ authToken 自动轮换
+### ④ gatewayToken 自动轮换
 
 ```
 Token 到期后，下次 POST /api/verify 时：
-  Tenant 自动生成新 authToken → 写入 DB + openclaw.json
+  Tenant 自动生成新 gatewayToken → 写入 DB + openclaw.json
   exec 无感知地使用新 token（用户无需手动操作）
 ```
 

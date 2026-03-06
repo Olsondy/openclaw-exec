@@ -5,19 +5,21 @@ import { useConfigStore } from '../../../store'
 
 interface Props {
   licenseId: number
-  authToken: string
   onSuccess: () => void
   onClose: () => void
 }
 
-export function FeishuWizard({ licenseId, authToken, onSuccess, onClose }: Props) {
-  const { tenantUrl } = useConfigStore()
+export function FeishuWizard({ licenseId, onSuccess, onClose }: Props) {
+  const { tenantUrl, licenseKey } = useConfigStore()
   const [appId, setAppId] = useState('')
   const [appSecret, setAppSecret] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const canSubmit = appId.trim().length > 0 && appSecret.trim().length > 0
+
+  // 使用 localStorage 中的 machine_id 作为 hwid（与 verify 时一致）
+  const hwid = localStorage.getItem('machine_id') ?? ''
 
   const handleSubmit = async () => {
     if (!canSubmit) return
@@ -27,7 +29,11 @@ export function FeishuWizard({ licenseId, authToken, onSuccess, onClose }: Props
       const res = await fetch(`${tenantUrl}/api/licenses/${licenseId}/bootstrap-config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ authToken, feishu: { appId: appId.trim(), appSecret: appSecret.trim() } }),
+        body: JSON.stringify({
+          licenseKey,
+          hwid,
+          feishu: { appId: appId.trim(), appSecret: appSecret.trim() },
+        }),
       })
       const body = await res.json()
       if (!res.ok || !body.success) {

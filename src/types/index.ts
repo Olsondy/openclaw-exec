@@ -49,7 +49,7 @@ export interface NodeRuntimeConfig {
   gatewayToken: string
   agentId: string
   deviceName: string
-  authToken?: string
+
   licenseId?: number
   tenantUrl?: string
 }

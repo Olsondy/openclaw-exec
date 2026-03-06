@@ -11,7 +11,7 @@ import { useNodeConnection } from './hooks/useNodeConnection'
 
 function AppInner() {
   const { wizardOpen, needs, closeWizard } = useBootstrapStore()
-  const { licenseId, authToken } = useConfigStore()
+  const { licenseId } = useConfigStore()
   const { verifyAndConnect } = useNodeConnection()
 
   return (
@@ -25,10 +25,9 @@ function AppInner() {
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
-      {wizardOpen && needs.feishu && licenseId && authToken && (
+      {wizardOpen && needs.feishu && licenseId && (
         <FeishuWizard
           licenseId={licenseId}
-          authToken={authToken}
           onSuccess={() => { closeWizard(); verifyAndConnect() }}
           onClose={closeWizard}
         />
