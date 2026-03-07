@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
 use futures_util::{SinkExt, StreamExt};
+use tauri::Manager;
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tokio::sync::Mutex;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
+
+const SIDECAR_TIMEOUT_MS: u64 = 30_000;
 
 // ─── OpenClaw Gateway 协议结构 ───────────────────────────────────
 
@@ -317,12 +320,12 @@ async fn handle_gateway_message(app: &tauri::AppHandle, text: &str) {
                                 r#type: invoke_params.command.split('.').next().unwrap_or("system").to_string(),
                                 payload: invoke_params.args.clone(),
                                 require_approval: false, // 审批逻辑由前端根据规则判断
-                                timeout_ms: 30000,
+                                timeout_ms: SIDECAR_TIMEOUT_MS,
                             };
                             app.emit("ws:task", &task).ok();
 
                             // 执行命令
-                            let result = execute_command(&invoke_params.command, &invoke_params.args).await;
+                            let result = execute_command(app, &invoke_params.command, &invoke_params.args).await;
 
                             // 发送结果回 Gateway
                             send_response(&req_id, &result).await;
@@ -364,9 +367,57 @@ async fn handle_gateway_message(app: &tauri::AppHandle, text: &str) {
     }
 }
 
-/// 执行命令（目前仅支持 system.run）
-async fn execute_command(command: &str, args: &serde_json::Value) -> TaskResult {
+/// 执行命令（system.run / canvas.snapshot 本地执行；browser.* / vision.* 路由到 sidecar）
+async fn execute_command(app: &tauri::AppHandle, command: &str, args: &serde_json::Value) -> TaskResult {
+    use crate::sidecar::{SidecarManager, SidecarTask};
+
     let start = std::time::Instant::now();
+    let task_type = command.split('.').next().unwrap_or("system");
+
+    // Route browser.* and vision.* to sidecar
+    if matches!(task_type, "browser" | "vision") {
+        let mgr_state = app.try_state::<Arc<SidecarManager>>();
+        return match mgr_state {
+            Some(mgr) => {
+                let task = SidecarTask {
+                    task_id: format!("{}_{}", command,
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_millis()),
+                    task_type: task_type.to_string(),
+                    payload: args.clone(),
+                    timeout_ms: SIDECAR_TIMEOUT_MS,
+                };
+                match mgr.execute(task).await {
+                    Ok(res) => TaskResult {
+                        task_id: String::new(),
+                        success: res.status == "success",
+                        stdout: res.result.map(|v: serde_json::Value| v.to_string()).unwrap_or_default(),
+                        stderr: res.error.unwrap_or_default(),
+                        exit_code: None,
+                        duration_ms: start.elapsed().as_millis() as u64,
+                    },
+                    Err(e) => TaskResult {
+                        task_id: String::new(),
+                        success: false,
+                        stdout: String::new(),
+                        stderr: format!("sidecar error: {}", e),
+                        exit_code: None,
+                        duration_ms: start.elapsed().as_millis() as u64,
+                    },
+                }
+            }
+            None => TaskResult {
+                task_id: String::new(),
+                success: false,
+                stdout: String::new(),
+                stderr: "sidecar not available".to_string(),
+                exit_code: None,
+                duration_ms: start.elapsed().as_millis() as u64,
+            },
+        };
+    }
 
     match command {
         "system.run" => {
