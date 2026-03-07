@@ -4,10 +4,11 @@
 mod auth_client;
 mod config;
 mod device_identity;
+mod sidecar;
 mod tray;
 mod ws_client;
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 #[tauri::command]
 async fn install_update(app: tauri::AppHandle) -> Result<(), String> {
