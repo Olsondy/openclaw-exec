@@ -3,6 +3,8 @@ import { Loader2, MessageSquare } from 'lucide-react'
 import { Button, Card } from '../../ui'
 import { useConfigStore } from '../../../store'
 
+const TENANT_API_BASE = import.meta.env.VITE_TENANT_API_BASE ?? ''
+
 interface Props {
   licenseId: number
   onSuccess: () => void
@@ -10,7 +12,7 @@ interface Props {
 }
 
 export function FeishuWizard({ licenseId, onSuccess, onClose }: Props) {
-  const { tenantUrl, licenseKey } = useConfigStore()
+  const { licenseKey } = useConfigStore()
   const [appId, setAppId] = useState('')
   const [appSecret, setAppSecret] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -26,7 +28,7 @@ export function FeishuWizard({ licenseId, onSuccess, onClose }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${tenantUrl}/api/licenses/${licenseId}/bootstrap-config`, {
+      const res = await fetch(`${TENANT_API_BASE}/api/licenses/${licenseId}/bootstrap-config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

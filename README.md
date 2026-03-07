@@ -58,7 +58,7 @@ User enters licenseKey in Settings
       ↓
   Tenant validates and returns:
       { success, data: { nodeConfig: { gatewayUrl, gatewayToken, gatewayWebUI,
-                                       agentId, deviceName, licenseId, tenantUrl },
+                                       agentId, deviceName, licenseId },
                          userProfile, needsBootstrap } }
       ↓
   exec persists nodeConfig to local config.json
@@ -139,6 +139,10 @@ openclaw-exec/
 ```bash
 # Install frontend dependencies
 npm install
+
+# Initialize environment variables
+cp .env.example .env
+# Edit .env if your tenant API is not hosted at localhost:3000
 
 # Start Vite dev server + Tauri desktop window
 npm run tauri:dev

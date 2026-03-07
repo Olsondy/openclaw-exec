@@ -58,7 +58,7 @@
       ↓
   Tenant 校验并返回：
       { success, data: { nodeConfig: { gatewayUrl, gatewayToken, gatewayWebUI,
-                                       agentId, deviceName, licenseId, tenantUrl },
+                                       agentId, deviceName, licenseId },
                          userProfile, needsBootstrap } }
       ↓
   exec 将 nodeConfig 持久化至本地 config.json
@@ -139,6 +139,10 @@ openclaw-exec/
 ```bash
 # 安装前端依赖
 npm install
+
+# 初始化环境变量配置
+cp .env.example .env
+# 如果你的 tenant API 不是运行在 localhost:3000，请修改 .env 中的地址
 
 # 启动 Vite 开发服务器 + Tauri 桌面窗口
 npm run tauri:dev

@@ -51,7 +51,6 @@ export interface NodeRuntimeConfig {
   deviceName: string
 
   licenseId?: number
-  tenantUrl?: string
 }
 
 /** 用户授权信息（从服务端 verify 接口获取） */

@@ -4,9 +4,8 @@ import { useConnectionStore, useConfigStore, useBootstrapStore } from '../store'
 import { useTauriEvent } from './useTauri'
 import type { VerifyResponse } from '../types'
 
-// TODO: 服务端就绪后，在 verifyAndConnect 中启用以下 fetch 调用
-// POST https://api.openclaw.example.com/v1/verify
-// body: { licenseKey, machineId }
+const TENANT_API_BASE = import.meta.env.VITE_TENANT_API_BASE ?? ''
+const VERIFY_ENDPOINT = `${TENANT_API_BASE}/api/verify`
 
 export function useNodeConnection() {
   const { setStatus, setError } = useConnectionStore()
@@ -33,17 +32,20 @@ export function useNodeConnection() {
 
       const machineId = await getMachineId()
 
-      // --- 占位：待服务端完成后，以下 mock 替换为真实 fetch 调用 ---
-      // const resp = await fetch(VERIFY_ENDPOINT, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ licenseKey, machineId }),
-      // })
-      // const result: VerifyResponse = await resp.json()
+      let result: VerifyResponse
 
-      // Mock 响应（开发阶段使用）
-      const result: VerifyResponse = await mockVerify(licenseKey, machineId)
-      // --- 占位结束 ---
+      if (import.meta.env.DEV) {
+        // 开发环境：使用 Mock 响应
+        result = await mockVerify(licenseKey, machineId)
+      } else {
+        // 生产环境：真实调用服务端 verify 接口
+        const resp = await fetch(VERIFY_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ licenseKey, machineId }),
+        })
+        result = await resp.json()
+      }
 
       if (!result.success) {
         setStatus('unauthorized')
@@ -66,7 +68,6 @@ export function useNodeConnection() {
       if (nodeConfig.licenseId) {
         setSessionMeta({
           licenseId: nodeConfig.licenseId,
-          tenantUrl: nodeConfig.tenantUrl ?? '',
         })
       }
 

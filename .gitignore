@@ -7,6 +7,7 @@ sidecar/dist/
 .env
 .env.local
 .env.*.local
+!.env.example
 .claude/settings.local.json
 cargo_check_output.txt
 check.bat

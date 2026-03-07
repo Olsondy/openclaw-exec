@@ -21,7 +21,6 @@ interface ConfigState {
   approvalRules: ApprovalRules
 
   licenseId: number | null
-  tenantUrl: string
 
   setLicenseKey: (key: string) => void
   setRuntimeConfig: (config: NodeRuntimeConfig) => void
@@ -29,7 +28,7 @@ interface ConfigState {
   clearSession: () => void
   toggleCapability: (key: keyof Capabilities) => void
   setApprovalRule: (key: keyof ApprovalRules, mode: ApprovalRules[keyof ApprovalRules]) => void
-  setSessionMeta: (meta: { licenseId: number; tenantUrl: string }) => void
+  setSessionMeta: (meta: { licenseId: number }) => void
 }
 
 const defaultCapabilities: Capabilities = {
@@ -53,7 +52,6 @@ export const useConfigStore = create<ConfigState>()(
       capabilities: defaultCapabilities,
       approvalRules: defaultApprovalRules,
       licenseId: null,
-      tenantUrl: '',
 
       setLicenseKey: (licenseKey) => set({ licenseKey }),
 
@@ -74,8 +72,8 @@ export const useConfigStore = create<ConfigState>()(
           approvalRules: { ...state.approvalRules, [key]: mode },
         })),
 
-      setSessionMeta: ({ licenseId, tenantUrl }) =>
-        set({ licenseId, tenantUrl }),
+      setSessionMeta: ({ licenseId }) =>
+        set({ licenseId }),
     }),
     {
       name: 'easy-openclaw-settings',
