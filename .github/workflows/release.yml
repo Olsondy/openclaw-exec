@@ -75,7 +75,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name || inputs.tag }}
-          releaseName: 'OpenClaw Node ${{ github.ref_name || inputs.tag }}'
+          releaseName: 'ClawMate ${{ github.ref_name || inputs.tag }}'
           releaseBody: |
             ## 更新内容
             请查看提交记录了解详情。

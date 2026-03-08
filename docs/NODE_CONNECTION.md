@@ -1,4 +1,4 @@
-# OpenClaw Node Connection Flow
+# ClawMate Connection Flow
 
 ## Overview
 

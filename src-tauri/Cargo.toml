@@ -1,7 +1,7 @@
 [package]
 name = "easy-openclaw"
 version = "0.1.0"
-description = "OpenClaw Node - AI Task Execution Desktop Client"
+description = "ClawMate - AI Task Execution Desktop Client"
 authors = []
 edition = "2021"
 

@@ -1,4 +1,4 @@
-# OpenClaw Node 桌面客户端实现计划
+# ClawMate 桌面客户端实现计划
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
@@ -26,7 +26,7 @@ npm create tauri-app@latest . -- --template react-ts --manager npm
 
 当提示时选择：
 - App name: `easy-openclaw`
-- Window title: `OpenClaw Node`
+- Window title: `ClawMate`
 - Frontend dist dir: `../dist`
 - Dev command: `npm run dev`
 
@@ -791,7 +791,7 @@ export function Sidebar() {
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white text-sm font-bold">OC</div>
           <div>
-            <div className="text-sm font-semibold text-surface-on">OpenClaw Node</div>
+            <div className="text-sm font-semibold text-surface-on">ClawMate</div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className={`w-1.5 h-1.5 rounded-full ${statusColors[status] ?? 'bg-gray-400'}`} />
               <span className="text-xs text-surface-on-variant capitalize">{status.replace('_', ' ')}</span>
@@ -2150,12 +2150,12 @@ git commit -m "feat: implement embedded WebView for cloud console"
 ```json
 // src-tauri/tauri.conf.json 关键字段：
 {
-  "productName": "OpenClaw Node",
+  "productName": "ClawMate",
   "version": "0.1.0",
   "app": {
     "windows": [
       {
-        "title": "OpenClaw Node",
+        "title": "ClawMate",
         "width": 980,
         "height": 680,
         "minWidth": 800,
@@ -2204,7 +2204,7 @@ npm run tauri build
 
 ```bash
 git add .
-git commit -m "feat: complete OpenClaw Node v0.1.0 initial implementation"
+git commit -m "feat: complete ClawMate v0.1.0 initial implementation"
 ```
 
 ---

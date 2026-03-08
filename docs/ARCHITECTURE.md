@@ -1,8 +1,8 @@
-# OpenClaw Node Architecture
+# ClawMate Architecture
 
 ## Overview
 
-OpenClaw Node is a desktop runtime composed of three layers:
+ClawMate is a desktop runtime composed of three layers:
 
 1. React UI (`src/`) for user interaction, status display, and local state management.
 2. Rust/Tauri core (`src-tauri/src/`) for privileged commands, auth HTTP calls, gateway WebSocket handling, and native desktop integration.

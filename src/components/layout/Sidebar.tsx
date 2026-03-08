@@ -40,7 +40,7 @@ export function Sidebar() {
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white text-sm font-bold">OC</div>
           <div>
-            <div className="text-sm font-semibold text-surface-on">OpenClaw Node</div>
+            <div className="text-sm font-semibold text-surface-on">ClawMate</div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className={`w-1.5 h-1.5 rounded-full ${statusColors[status] ?? 'bg-gray-400'}`} />
               <span className="text-xs text-surface-on-variant capitalize">{status.replace('_', ' ')}</span>

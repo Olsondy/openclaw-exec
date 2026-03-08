@@ -1,7 +1,7 @@
 {
-  "productName": "OpenClaw Node",
+  "productName": "ClawMate",
   "version": "0.1.0",
-  "identifier": "com.easy-openclaw.app",
+  "identifier": "com.easy-openclaw.clawmate",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "OpenClaw Node",
+        "title": "ClawMate",
         "width": 980,
         "height": 680,
         "minWidth": 800,

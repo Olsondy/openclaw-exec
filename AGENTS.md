@@ -1,6 +1,6 @@
 ## Project Overview
 
-OpenClaw Node is a desktop execution client built with React and Tauri.
+ClawMate is a desktop execution client built with React and Tauri.
 It runs as a local node process, authenticates against a remote auth service, connects to a gateway over WebSocket, and executes delegated task modules through a sidecar runtime.
 The main code split is:
 
