@@ -25,23 +25,89 @@
   font-style: normal;
   font-display: swap;
 }
+
 @layer base {
   * {
     box-sizing: border-box;
   }
+
+  /* ── Light Theme ── */
+  :root {
+    --color-primary: #0B57D0;
+    --color-primary-container: #D3E3FD;
+    --color-primary-on: #FFFFFF;
+    --color-primary-on-container: #041E49;
+
+    --color-secondary: #5E5E5E;
+    --color-secondary-container: #E3E3E3;
+    --color-secondary-on: #FFFFFF;
+    --color-secondary-on-container: #1F1F1F;
+
+    --color-surface: #FFFFFF;
+    --color-surface-variant: #F0F4F9;
+    --color-surface-on: #1F1F1F;
+    --color-surface-on-variant: #444746;
+
+    --color-error: #B3261E;
+    --color-error-container: #F9DEDC;
+    --color-error-on: #FFFFFF;
+    --color-error-on-container: #410E0B;
+
+    --color-outline: #DADCE0;
+    --color-background: transparent;
+    --color-nav-hover: rgba(0, 0, 0, 0.06);
+    --color-card-bg: #FFFFFF;
+    --color-card-border: rgba(0, 0, 0, 0.08);
+    --color-btn-border: rgba(0, 0, 0, 0.14);
+  }
+
+  /* ── Dark Theme ── */
+  .dark {
+    --color-primary: #A8B4FF;
+    --color-primary-container: #1F2340;
+    --color-primary-on: #0A0A14;
+    --color-primary-on-container: #BDC8FF;
+
+    --color-secondary: #8A8AA8;
+    --color-secondary-container: #1A1A28;
+    --color-secondary-on: #E0E0F0;
+    --color-secondary-on-container: #B0B0CC;
+
+    /* surface 统一为纯深灰，与截图参考风格一致 */
+    --color-surface: #1A1A1A;
+    --color-surface-variant: #2E2E2E;
+    --color-surface-on: #E4E4F0;
+    --color-surface-on-variant: #7878A0;
+
+    --color-error: #F87171;
+    --color-error-container: #7F1D1D;
+    --color-error-on: #FEE2E2;
+    --color-error-on-container: #FECACA;
+
+    /* outline 改为极细白色描边，覆盖所有 border-outline 用法 */
+    --color-outline: rgba(255, 255, 255, 0.10);
+    --color-nav-hover: rgba(255, 255, 255, 0.12);
+    --color-card-bg: #252525;
+    --color-card-border: rgba(255, 255, 255, 0.06);
+    --color-btn-border: rgba(255, 255, 255, 0.12);
+  }
+
   body {
-    @apply bg-background text-surface-on font-sans;
+    @apply bg-background text-surface-on font-sans transition-colors duration-300;
     -webkit-font-smoothing: antialiased;
   }
+
   /* Material Ripple 基础 */
   .ripple {
     @apply relative overflow-hidden;
   }
+
   .ripple::after {
     content: '';
     @apply absolute inset-0 bg-current opacity-0 transition-opacity duration-200;
     border-radius: inherit;
   }
+
   .ripple:active::after {
     @apply opacity-10;
   }
