@@ -8,6 +8,15 @@ ClawMate is a desktop runtime composed of three layers:
 2. Rust/Tauri core (`src-tauri/src/`) for privileged commands, auth HTTP calls, gateway WebSocket handling, and native desktop integration.
 3. Node sidecar (`sidecar/src/`) for task execution modules invoked through IPC-style messaging.
 
+## Window Appearance
+
+The main window uses the Windows 11 **Mica** material effect (`windowEffects: ["mica"]` in `tauri.conf.json`), with `transparent: true`. This makes the sidebar background automatically inherit the system accent color blended with the desktop wallpaper, matching the native title bar appearance.
+
+- No custom accent color reading is needed; the OS compositor handles blending.
+- The sidebar (`Sidebar.tsx`) uses `bg-transparent` to expose the Mica surface.
+- The main content area retains a solid `bg-white` background for readability.
+- On non-Windows platforms, the transparent background gracefully falls back to the default window color.
+
 ## Runtime Layers
 
 ### React UI Layer
@@ -65,11 +74,17 @@ All routes are nested under `AppLayout`, which provides the persistent sidebar s
 
 ### `config` store (`src/store/config.store.ts`)
 
-- Owns:
-  - `config` (`token`, `machine_id`, `auth_endpoint`, `gateway_endpoint`, `cloud_console_url`)
+- Persisted fields (via `zustand/persist` → localStorage):
+  - `licenseKey`: the user's license key string
+  - `expiryDate`: cached expiry from last successful verify
+- In-memory only (not persisted, cleared on session end):
+  - `runtimeConfig` (`NodeRuntimeConfig`): `gatewayUrl`, `gatewayWebUI`, `gatewayToken`, `agentId`, `deviceName`, `licenseId`
+  - `userProfile` (`UserProfile`): `licenseStatus`, `expiryDate`
+- Also owns:
   - `capabilities` flags (`browser`, `system`, `vision`)
   - `approvalRules` (`always`, `never`, `sensitive_only`)
-- Provides mutators for each config field and rule/capability updates.
+  - `licenseId` (in-memory session meta)
+- Provides mutators: `setLicenseKey`, `setRuntimeConfig`, `setUserProfile`, `setSessionMeta`, `clearSession`, `toggleCapability`, `setApprovalRule`.
 
 ### `connection` store (`src/store/connection.store.ts`)
 
@@ -96,8 +111,27 @@ All routes are nested under `AppLayout`, which provides the persistent sidebar s
 - `save_config`: write node config to Tauri store.
 - `check_auth`: call remote auth endpoint with `{ token, machine_id }`.
 - `connect_gateway`: connect to gateway WebSocket and start event emission.
-- `disconnect_gateway`: exposed command endpoint for disconnect flow.
+- `disconnect_gateway`: close active WebSocket connection.
 - `open_cloud_console`: open/focus the cloud console external window.
+- `get_device_identity`: load or generate the local ed25519 device key pair.
+- `local_connect`: discover local openclaw service, pair device via `~/.openclaw/devices/paired.json`, optionally restart service, and return gateway connection params.
+- `install_update`: check for and apply an available app update via `tauri-plugin-updater`.
+
+## Local Connection Mode
+
+The Settings page supports a second connection mode — **Local OpenClaw** — for users running openclaw on the same machine (local install only; containers are not supported for automatic restart).
+
+### Flow (`local_connect` command, `src-tauri/src/local_connect.rs`)
+
+1. **Workspace discovery**: locates `~/.openclaw/` and reads `openclaw.json` for the configured gateway port (default `18789`).
+2. **Port scan**: TCP-probes `127.0.0.1:{port}` through `{port+10}` to find the first live gateway.
+3. **Device identity**: loads or generates the local ed25519 key pair via `device_identity`.
+4. **Pairing**: reads `devices/paired.json`; if the current `device_id` already has a `node` token, reuses it. Otherwise writes a new entry with a freshly generated 32-byte hex token.
+5. **Service restart** (only when a new entry was written): executes `openclaw daemon restart`. Failure (e.g. container install, command not found) is logged and does not abort the flow.
+6. **Health wait**: polls the port for up to 15 seconds after restart before proceeding.
+7. Returns `{ gateway_url, gateway_web_ui, token, agent_id, device_name, restart_log }` to frontend.
+
+The frontend hook `useLocalConnection` (`src/hooks/useLocalConnection.ts`) drives the phase state machine and feeds timestamped log lines to `LocalConnectPanel` (`src/components/features/settings/LocalConnectPanel.tsx`).
 
 ### Tauri Events (Rust -> frontend)
 

@@ -139,11 +139,16 @@ Gateway pushes { type: "req", method: "node.invoke",
 ```text
 openclaw-mate/
 ├── src/                 # React frontend (UI / state / pages)
+│   ├── components/features/settings/
+│   │   └── LocalConnectPanel.tsx   # Local openclaw connection panel
+│   └── hooks/
+│       └── useLocalConnection.ts   # Local connection phase state machine
 ├── src-tauri/           # Tauri Rust core layer
 │   └── src/
 │       ├── auth_client.rs      # POST /api/verify activation logic
 │       ├── ws_client.rs        # WebSocket Gateway persistent connection
 │       ├── device_identity.rs  # ed25519 key pair & deviceId derivation
+│       ├── local_connect.rs    # Local openclaw discovery, pairing & restart
 │       ├── config.rs           # local config.json persistence
 │       └── main.rs             # Tauri command registration & app entry
 ├── sidecar/             # Node.js subprocess (advanced task handling)
@@ -168,13 +173,11 @@ openclaw-mate/
 # Install workspace dependencies (root + sidecar)
 pnpm install
 
-# Initialize environment variables
-cp .env.example .env
-# Edit .env if your tenant API is not hosted at localhost:3000
-
 # Start Vite dev server + Tauri desktop window
 pnpm run tauri:dev
 ```
+
+> `VITE_TENANT_API_BASE` can be set in a `.env` file to override the default tenant API origin (used only in cloud License Key mode). Local OpenClaw mode requires no environment configuration.
 
 ### Production Build
 
@@ -195,10 +198,23 @@ pnpm run check:all
 
 ## ⚙️ Usage
 
-1. Create a License in the **openclaw-tenant** admin panel to obtain a `token`
-2. Enter the `token` and endpoint URLs on the exec Settings page, then click Activate
-3. After activation, the node automatically connects to the dedicated Gateway and shows online status
-4. Cloud AI Agents can now dispatch local execution tasks through this node
+### Cloud Mode (License Key)
+
+1. Create a License in the **openclaw-tenant** admin panel to obtain a `licenseKey`
+2. Open the Settings page in openclaw-mate, make sure the **License Key** tab is selected
+3. Enter the `licenseKey` and click **Verify & Activate**
+4. The node automatically connects to the dedicated Gateway and shows online status
+5. Cloud AI Agents can now dispatch local execution tasks through this node
+
+### Local Mode (Local OpenClaw)
+
+1. Install openclaw locally on the same machine (`npm install -g openclaw` or via the official installer)
+2. Start the openclaw service (`openclaw daemon start`)
+3. Open Settings → switch to the **本地 OpenClaw** tab
+4. Click **连接本地 OpenClaw** — the app will auto-discover the gateway, pair the device, and connect
+5. On first connection a new device entry is written to `~/.openclaw/devices/paired.json` and the service is restarted automatically
+
+> Container-based openclaw installs are partially supported: discovery and pairing work, but the automatic `openclaw daemon restart` step will fail silently (logged) — manually restart the container after first pairing.
 
 ---
 
