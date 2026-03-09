@@ -4,6 +4,7 @@
 mod auth_client;
 mod config;
 mod device_identity;
+mod local_connect;
 mod sidecar;
 mod tray;
 mod ws_client;
@@ -79,7 +80,7 @@ fn main() {
             // two handle clones. Sidecar startup is non-blocking for the main thread.
             tauri::async_runtime::spawn(async move {
                 // Spawn sidecar
-                match SidecarManager::spawn("node", &["sidecar/dist/index.js"]).await {
+                match SidecarManager::spawn("node", &["../sidecar/dist/index.js"]).await {
                     Ok(mgr) => {
                         handle.manage(Arc::new(mgr));
                         eprintln!("[sidecar] ready");
@@ -114,6 +115,7 @@ fn main() {
             get_device_identity,
             open_cloud_console,
             install_update,
+            local_connect::local_connect,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
