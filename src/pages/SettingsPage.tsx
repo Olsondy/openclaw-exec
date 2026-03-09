@@ -1,25 +1,57 @@
 import { useState } from 'react'
-import { KeyRound, CheckCircle, AlertCircle, Loader2, ExternalLink, Shield, MessageSquare } from 'lucide-react'
+import { KeyRound, CheckCircle, AlertCircle, Loader2, ExternalLink, Shield, MessageSquare, TriangleAlert } from 'lucide-react'
 import { TopBar } from '../components/layout/TopBar'
 import { Card, Button } from '../components/ui'
 import { useConfigStore, useConnectionStore, useBootstrapStore } from '../store'
 import { useNodeConnection } from '../hooks/useNodeConnection'
 import { ApiWizard } from '../components/features/wizard/ApiWizard'
 
+function maskLicenseKey(key: string): string {
+  const parts = key.split('-')
+  if (parts.length === 4) {
+    return `${parts[0]}-****-****-${parts[3]}`
+  }
+  return `${key.slice(0, 4)}****`
+}
+
 export function SettingsPage() {
-  const { licenseKey, setLicenseKey, userProfile, runtimeConfig, approvalRules, setApprovalRule, licenseId } = useConfigStore()
+  const { licenseKey, expiryDate, setLicenseKey, userProfile, runtimeConfig, approvalRules, setApprovalRule, licenseId } = useConfigStore()
   const { status, errorMessage } = useConnectionStore()
   const { verifyAndConnect } = useNodeConnection()
   const { openWizard } = useBootstrapStore()
 
-  const [localKey, setLocalKey] = useState(licenseKey)
+  const [isChangingKey, setIsChangingKey] = useState(!licenseKey)
+  const [newKey, setNewKey] = useState('')
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [apiWizardOpen, setApiWizardOpen] = useState(false)
 
   const isLoading = status === 'auth_checking' || status === 'connecting'
   const isOnline = status === 'online'
+  const hasKey = Boolean(licenseKey)
 
-  const handleActivate = async () => {
-    setLicenseKey(localKey)
+  const handleRequestChange = () => {
+    setNewKey('')
+    setIsChangingKey(true)
+  }
+
+  const handleCancel = () => {
+    setNewKey('')
+    setIsChangingKey(false)
+  }
+
+  // 首次激活（无旧 key）直接激活，无需弹窗
+  const handleActivateOrConfirm = () => {
+    if (hasKey) {
+      setShowConfirmDialog(true)
+    } else {
+      doActivate()
+    }
+  }
+
+  const doActivate = async () => {
+    setShowConfirmDialog(false)
+    setLicenseKey(newKey.trim())
+    setIsChangingKey(false)
     await verifyAndConnect()
   }
 
@@ -39,37 +71,78 @@ export function SettingsPage() {
           </div>
 
           <div className="space-y-3">
-            <div>
-              <label className="text-xs text-surface-on-variant mb-1 block">License Key</label>
-              <input
-                type="password"
-                value={localKey}
-                onChange={(e) => setLocalKey(e.target.value)}
-                placeholder="XXXX-XXXX-XXXX-XXXX"
-                className={inputClass}
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </div>
-
-            {errorMessage && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-error-container text-error-on-container text-sm">
-                <AlertCircle size={14} className="mt-0.5 shrink-0" />
-                <span>{errorMessage}</span>
+            {/* 当前已绑定 Key 信息 */}
+            {hasKey && (
+              <div className="rounded-lg border border-surface-variant bg-surface-variant/30 px-3 py-2.5 space-y-1.5">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-surface-on-variant">当前 Key</span>
+                  <span className="font-mono text-surface-on tracking-wider">{maskLicenseKey(licenseKey)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-surface-on-variant">到期时间</span>
+                  <span className="text-surface-on">
+                    {expiryDate === 'Permanent' || !expiryDate ? '永久有效' : expiryDate}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-surface-on-variant">授权状态</span>
+                  <span className={isOnline ? 'text-green-500 font-medium' : 'text-surface-on-variant'}>
+                    {isOnline ? '● 已激活' : '○ 未连接'}
+                  </span>
+                </div>
               </div>
             )}
 
-            <Button
-              onClick={handleActivate}
-              disabled={isLoading || !localKey.trim()}
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 size={14} className="animate-spin" />
-                  {status === 'auth_checking' ? '验证中...' : '连接中...'}
-                </span>
-              ) : isOnline ? '重新验证' : '验证并激活'}
-            </Button>
+            {/* 换 Key 输入区 */}
+            {isChangingKey ? (
+              <>
+                <div>
+                  <label className="text-xs text-surface-on-variant mb-1 block">
+                    {hasKey ? '新 License Key' : 'License Key'}
+                  </label>
+                  <input
+                    type="text"
+                    value={newKey}
+                    onChange={(e) => setNewKey(e.target.value)}
+                    placeholder="XXXX-XXXX-XXXX-XXXX"
+                    className={inputClass}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </div>
+
+                {errorMessage && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-error-container text-error-on-container text-sm">
+                    <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  {hasKey && (
+                    <Button variant="outlined" onClick={handleCancel} disabled={isLoading}>
+                      取消
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleActivateOrConfirm}
+                    disabled={isLoading || !newKey.trim()}
+                    className="flex-1"
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 size={14} className="animate-spin" />
+                        {status === 'auth_checking' ? '验证中...' : '连接中...'}
+                      </span>
+                    ) : '验证并激活'}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Button variant="outlined" onClick={handleRequestChange} className="w-full">
+                更换 License Key
+              </Button>
+            )}
           </div>
         </Card>
 
@@ -170,6 +243,47 @@ export function SettingsPage() {
         </Card>
 
       </div>
+      {/* 换 Key 二次确认弹窗 */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-surface rounded-2xl shadow-elevation-3 p-6 w-80 space-y-4">
+            <div className="flex items-center gap-2 text-warning">
+              <TriangleAlert size={18} />
+              <h3 className="text-sm font-semibold text-surface-on">更换 License Key</h3>
+            </div>
+            <p className="text-sm text-surface-on-variant leading-relaxed">
+              即将切换到新的 License Key，此操作将会：
+            </p>
+            <ul className="text-sm text-surface-on space-y-1.5 pl-1">
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 text-surface-on-variant">•</span>
+                <span>当前已绑定设备会自动解绑</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 text-surface-on-variant">•</span>
+                <span>重新授权后节点数据将清空</span>
+              </li>
+            </ul>
+            <p className="text-xs text-error font-medium">此操作不可撤销，请谨慎操作。</p>
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="outlined"
+                className="flex-1"
+                onClick={() => setShowConfirmDialog(false)}
+              >
+                取消
+              </Button>
+              <Button
+                className="flex-1 bg-error text-white hover:bg-error/90"
+                onClick={doActivate}
+              >
+                确认更换
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {apiWizardOpen && licenseId && (
         <ApiWizard
           licenseId={licenseId}

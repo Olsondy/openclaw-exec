@@ -2,14 +2,19 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Capabilities, ApprovalRules, NodeRuntimeConfig, UserProfile } from '../types'
 
-/** 持久化至本地的设置（仅 licenseKey） */
+/** 持久化至本地的设置 */
 interface PersistedSettings {
   licenseKey: string
+  /** 上次 verify 成功后缓存的到期日期，用于冷启动时展示（"Permanent" 表示永久） */
+  expiryDate: string
 }
 
 interface ConfigState {
   /** 持久化：用户的 License Key */
   licenseKey: string
+
+  /** 持久化：上次 verify 成功后缓存的到期日期 */
+  expiryDate: string
 
   /** 内存中：节点运行时配置（来自服务端 verify 接口，不持久化） */
   runtimeConfig: NodeRuntimeConfig | null
@@ -47,6 +52,7 @@ export const useConfigStore = create<ConfigState>()(
   persist(
     (set) => ({
       licenseKey: '',
+      expiryDate: '',
       runtimeConfig: null,
       userProfile: null,
       capabilities: defaultCapabilities,
@@ -57,7 +63,8 @@ export const useConfigStore = create<ConfigState>()(
 
       setRuntimeConfig: (runtimeConfig) => set({ runtimeConfig }),
 
-      setUserProfile: (userProfile) => set({ userProfile }),
+      setUserProfile: (userProfile) =>
+        set({ userProfile, expiryDate: userProfile.expiryDate }),
 
       /** 清除内存中的 Session（但保留 licenseKey） */
       clearSession: () => set({ runtimeConfig: null, userProfile: null, licenseId: null }),
@@ -81,6 +88,7 @@ export const useConfigStore = create<ConfigState>()(
       // runtimeConfig 和 userProfile 不持久化，保障 Token 隐私
       partialize: (state): PersistedSettings => ({
         licenseKey: state.licenseKey,
+        expiryDate: state.expiryDate,
       }),
     }
   )
