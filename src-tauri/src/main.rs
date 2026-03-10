@@ -5,6 +5,7 @@ mod auth_client;
 mod config;
 mod device_identity;
 mod local_connect;
+mod profile_store;
 mod sidecar;
 mod tray;
 mod ws_client;
@@ -116,6 +117,13 @@ fn main() {
             open_cloud_console,
             install_update,
             local_connect::local_connect,
+            profile_store::get_app_config,
+            profile_store::save_app_config,
+            profile_store::get_license_profile,
+            profile_store::save_license_profile,
+            profile_store::get_local_profile,
+            profile_store::save_local_profile,
+            profile_store::export_config_snapshot,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
