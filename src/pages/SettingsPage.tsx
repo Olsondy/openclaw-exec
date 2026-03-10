@@ -121,8 +121,11 @@ export function SettingsPage() {
                 <span className={`relative inline-flex rounded-full h-2 w-2 ${isOnline ? 'bg-green-500' : 'bg-surface-on-variant/30'}`} />
               </span>
               <span className="text-xs text-surface-on-variant">
-                {isLoading ? '连接中...' : isOnline ? '网关已连接' : '网关未连接'}
+                {isLoading ? '连接中...' : isOnline ? '网关已连接' : '未连接'}
               </span>
+              {!connectionMode && !isOnline && (
+                <span className="text-xs text-surface-on-variant/50">· 请选择连接方式</span>
+              )}
             </div>
 
             {/* 两个小卡片 */}
