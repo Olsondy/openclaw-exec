@@ -4,6 +4,7 @@ import {
   Shield, MessageSquare, TriangleAlert, Palette, Languages,
   Sun, Moon, Monitor, ArrowLeftRight, Cpu, ArrowRight,
 } from 'lucide-react'
+import { invoke } from '@tauri-apps/api/core'
 import { TopBar } from '../components/layout/TopBar'
 import { Card, Button } from '../components/ui'
 import { useConfigStore, useConnectionStore, useBootstrapStore } from '../store'
@@ -115,7 +116,6 @@ export function SettingsPage() {
                       key={mode}
                       type="button"
                       onClick={async () => {
-                        const { invoke } = await import('@tauri-apps/api/core')
                         await invoke('save_app_config', { config: { connectionMode: mode } })
                         setConnectionMode(mode)
                       }}
