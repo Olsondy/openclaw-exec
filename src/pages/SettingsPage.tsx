@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  KeyRound, CheckCircle, AlertCircle, Loader2, ExternalLink,
+  KeyRound, AlertCircle, Loader2,
   Shield, MessageSquare, TriangleAlert, Palette, Languages,
   Sun, Moon, Monitor, ArrowLeftRight, Cpu,
 } from 'lucide-react'
@@ -44,7 +44,7 @@ const MODE_LABEL: Record<ConnectionMode, string> = {
 export function SettingsPage() {
   const {
     licenseKey, expiryDate, setLicenseKey,
-    userProfile, runtimeConfig, approvalRules, setApprovalRule,
+    approvalRules, setApprovalRule,
     licenseId, connectionMode, setConnectionMode,
   } = useConfigStore()
   const { status, errorMessage } = useConnectionStore()
@@ -120,26 +120,30 @@ export function SettingsPage() {
 
             {connectionMode === 'license' && (
               <>
-                {hasKey && (
-                  <div className="rounded-lg border border-white/8 bg-surface px-3 py-2.5 space-y-1.5 mb-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-surface-on-variant">当前 Key</span>
-                      <span className="font-mono text-surface-on">{maskLicenseKey(licenseKey)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-surface-on-variant">到期日</span>
-                      <span className="text-surface-on">
-                        {expiryDate === 'Permanent' || !expiryDate ? '永久' : expiryDate}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-surface-on-variant">状态</span>
-                      <span className={isOnline ? 'text-green-500 font-medium' : 'text-surface-on-variant'}>
-                        {isOnline ? '已连接' : '未连接'}
-                      </span>
-                    </div>
+                {/* 连接状态 + license 信息 */}
+                <div className="rounded-lg border border-white/8 bg-surface px-3 py-2.5 space-y-1.5 mb-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-surface-on-variant">网关状态</span>
+                    <span className={`flex items-center gap-1.5 font-medium ${isOnline ? 'text-green-500' : 'text-surface-on-variant'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-surface-on-variant'}`} />
+                      {isLoading ? '连接中...' : isOnline ? '已连接' : '未连接'}
+                    </span>
                   </div>
-                )}
+                  {hasKey && (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-surface-on-variant">License Key</span>
+                        <span className="font-mono text-surface-on">{maskLicenseKey(licenseKey)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-surface-on-variant">到期时间</span>
+                        <span className="text-surface-on">
+                          {expiryDate === 'Permanent' || !expiryDate ? '永久' : expiryDate}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 {isChangingKey ? (
                   <div className="space-y-3">
@@ -222,53 +226,23 @@ export function SettingsPage() {
               )}
             </div>
 
-            {connectionMode === 'local' && <LocalConnectPanel />}
+            {connectionMode === 'local' && (
+              <>
+                {/* 连接状态 */}
+                <div className="rounded-lg border border-white/8 bg-surface px-3 py-2.5 mb-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-surface-on-variant">网关状态</span>
+                    <span className={`flex items-center gap-1.5 font-medium ${isOnline ? 'text-green-500' : 'text-surface-on-variant'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-surface-on-variant'}`} />
+                      {isLoading ? '连接中...' : isOnline ? '已连接' : '未连接'}
+                    </span>
+                  </div>
+                </div>
+                <LocalConnectPanel />
+              </>
+            )}
           </Card>
         </section>
-
-        {/* ── 节点状态 ── */}
-        {isOnline && userProfile && runtimeConfig && (
-          <section>
-            <SectionHeader title="节点状态" />
-            <Card>
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle size={15} className="text-green-500" />
-                <span className="text-sm font-medium text-surface-on">已连接</span>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-surface-on-variant">授权状态</span>
-                  <span className="text-green-500 font-medium">{userProfile.licenseStatus}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-surface-on-variant">到期日</span>
-                  <span className="text-surface-on">{userProfile.expiryDate}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-surface-on-variant">设备名</span>
-                  <span className="text-surface-on font-mono">{runtimeConfig.deviceName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-surface-on-variant">Agent ID</span>
-                  <span className="text-surface-on font-mono text-xs truncate max-w-[200px]">{runtimeConfig.agentId}</span>
-                </div>
-                {runtimeConfig.gatewayWebUI && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-surface-on-variant">控制台</span>
-                    <a
-                      href={runtimeConfig.gatewayWebUI}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-primary text-xs hover:underline"
-                    >
-                      打开 <ExternalLink size={11} />
-                    </a>
-                  </div>
-                )}
-              </div>
-            </Card>
-          </section>
-        )}
 
         {/* ── 节点配置 ── */}
         <section>
