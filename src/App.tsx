@@ -1,6 +1,7 @@
 import { useCallback, useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { invoke } from '@tauri-apps/api/core'
 import { AppLayout } from './components/layout/AppLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { ActivityPage } from './pages/ActivityPage'
@@ -11,9 +12,11 @@ import { useBootstrapStore, useConfigStore } from './store'
 import { FeishuWizard } from './components/features/wizard/FeishuWizard'
 import { ApiWizard } from './components/features/wizard/ApiWizard'
 import { ChannelAuthDialog } from './components/features/channel-auth/ChannelAuthDialog'
+import { WelcomeModal } from './components/features/welcome/WelcomeModal'
 import { useNodeConnection } from './hooks/useNodeConnection'
 import { useTauriEvent } from './hooks/useTauri'
 import { useI18nStore } from './i18n'
+import type { ConnectionMode } from './store/config.store'
 
 
 type GatewayEventEnvelope = {
@@ -23,10 +26,21 @@ type GatewayEventEnvelope = {
 
 function AppInner() {
   const { wizardOpen, needs, closeWizard } = useBootstrapStore()
-  const { licenseId } = useConfigStore()
+  const { licenseId, connectionMode, setConnectionMode } = useConfigStore()
   const { verifyAndConnect } = useNodeConnection()
   const [showChannelAuthDialog, setShowChannelAuthDialog] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false)
   const theme = useI18nStore((s) => s.theme)
+
+  // 启动时从文件加载 connectionMode
+  useEffect(() => {
+    invoke<{ connectionMode: ConnectionMode | null }>('get_app_config')
+      .then(({ connectionMode: mode }) => {
+        setConnectionMode(mode ?? null)
+        if (!mode) setShowWelcome(true)
+      })
+      .catch(() => setShowWelcome(true))
+  }, [])
 
   // 将主题色同步到 html 元素
   useEffect(() => {
@@ -65,6 +79,7 @@ function AppInner() {
 
   return (
     <>
+      {showWelcome && <WelcomeModal onDone={() => setShowWelcome(false)} />}
       <Routes>
         <Route path="/" element={<AppLayout />}>
           <Route index element={<DashboardPage />} />

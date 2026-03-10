@@ -2,30 +2,25 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Capabilities, ApprovalRules, NodeRuntimeConfig, UserProfile } from '../types'
 
+export type ConnectionMode = 'license' | 'local'
+
 /** 持久化至本地的设置 */
 interface PersistedSettings {
   licenseKey: string
-  /** 上次 verify 成功后缓存的到期日期，用于冷启动时展示（"Permanent" 表示永久） */
   expiryDate: string
 }
 
 interface ConfigState {
-  /** 持久化：用户的 License Key */
   licenseKey: string
-
-  /** 持久化：上次 verify 成功后缓存的到期日期 */
   expiryDate: string
-
-  /** 内存中：节点运行时配置（来自服务端 verify 接口，不持久化） */
   runtimeConfig: NodeRuntimeConfig | null
-
-  /** 内存中：用户授权信息（来自服务端 verify 接口，不持久化） */
   userProfile: UserProfile | null
-
   capabilities: Capabilities
   approvalRules: ApprovalRules
-
   licenseId: number | null
+
+  /** 连接模式：null 表示首次启动未选择，从 ~/clawmate/config.json 加载 */
+  connectionMode: ConnectionMode | null
 
   setLicenseKey: (key: string) => void
   setRuntimeConfig: (config: NodeRuntimeConfig) => void
@@ -34,6 +29,9 @@ interface ConfigState {
   toggleCapability: (key: keyof Capabilities) => void
   setApprovalRule: (key: keyof ApprovalRules, mode: ApprovalRules[keyof ApprovalRules]) => void
   setSessionMeta: (meta: { licenseId: number }) => void
+  setConnectionMode: (mode: ConnectionMode | null) => void
+  /** 切换模式时清除会话数据，但不清除 connectionMode 本身 */
+  resetForModeSwitch: () => void
 }
 
 const defaultCapabilities: Capabilities = {
@@ -58,6 +56,7 @@ export const useConfigStore = create<ConfigState>()(
       capabilities: defaultCapabilities,
       approvalRules: defaultApprovalRules,
       licenseId: null,
+      connectionMode: null,
 
       setLicenseKey: (licenseKey) => set({ licenseKey }),
 
@@ -66,7 +65,6 @@ export const useConfigStore = create<ConfigState>()(
       setUserProfile: (userProfile) =>
         set({ userProfile, expiryDate: userProfile.expiryDate }),
 
-      /** 清除内存中的 Session（但保留 licenseKey） */
       clearSession: () => set({ runtimeConfig: null, userProfile: null, licenseId: null }),
 
       toggleCapability: (key) =>
@@ -79,13 +77,22 @@ export const useConfigStore = create<ConfigState>()(
           approvalRules: { ...state.approvalRules, [key]: mode },
         })),
 
-      setSessionMeta: ({ licenseId }) =>
-        set({ licenseId }),
+      setSessionMeta: ({ licenseId }) => set({ licenseId }),
+
+      setConnectionMode: (connectionMode) => set({ connectionMode }),
+
+      resetForModeSwitch: () =>
+        set({
+          runtimeConfig: null,
+          userProfile: null,
+          licenseId: null,
+          licenseKey: '',
+          expiryDate: '',
+          approvalRules: defaultApprovalRules,
+        }),
     }),
     {
       name: 'easy-openclaw-settings',
-      // 只将 licenseKey、capabilities、approvalRules 写入本地存储，
-      // runtimeConfig 和 userProfile 不持久化，保障 Token 隐私
       partialize: (state): PersistedSettings => ({
         licenseKey: state.licenseKey,
         expiryDate: state.expiryDate,
