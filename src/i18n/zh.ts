@@ -9,6 +9,10 @@ export type Dict = {
     devConsole: string
     expand: string
     collapse: string
+    gatewayConnecting: string
+    gatewayConnected: string
+    gatewayDisconnected: string
+    reconnect: string
   }
   topbar: {
     dashboardSub: string
@@ -77,6 +81,32 @@ export type Dict = {
     configureTelegram: string
     activateFirst: string
   }
+  welcome: {
+    title: string
+    subtitle: string
+    licenseTitle: string
+    licenseDesc: string
+    licenseHint: string
+    localTitle: string
+    localDesc: string
+    localHint: string
+    initializing: string
+    continue: string
+    skip: string
+  }
+  localConnect: {
+    idle: string
+    scanning: string
+    pairing: string
+    restarting: string
+    connecting: string
+    done: string
+    error: string
+    desc: string
+    connected: string
+    errorMsg: string
+    connectedBtn: string
+  }
   settings: {
     licenseActivation: string
     currentKey: string
@@ -126,6 +156,22 @@ export type Dict = {
     approvalBrowser: string
     approvalSystem: string
     approvalVision: string
+    sectionConnection: string
+    sectionNode: string
+    sectionPreferences: string
+    current: string
+    cloud: string
+    local: string
+    keyLabel: string
+    expiryLabel: string
+    expiryPermanent: string
+    licenseModalTitle: string
+    currentKeyLabel: string
+    expiryTimeLabel: string
+    changeAndActivate: string
+    localModalTitle: string
+    modeCloud: string
+    modeLocal: string
   }
 }
 
@@ -140,6 +186,10 @@ export const zh: Dict = {
     devConsole: '开发者控制台',
     expand: '展开菜单',
     collapse: '收起菜单',
+    gatewayConnecting: '连接中...',
+    gatewayConnected: '已连接',
+    gatewayDisconnected: '未连接',
+    reconnect: '重连',
   },
 
   // TopBar subtitles
@@ -216,7 +266,37 @@ export const zh: Dict = {
     telegram: 'Telegram',
     telegramDesc: '配置 Telegram Bot Token，启用 Telegram 消息通道后即可通过 Telegram 与 AI 交互。',
     configureTelegram: '配置 Telegram',
-    activateFirst: '请先在设置中激活 License。',
+    activateFirst: '当前网关暂未链接。',
+  },
+
+  // Welcome
+  welcome: {
+    title: '欢迎使用 ClawMate',
+    subtitle: '请选择连接方式，后续可在设置中切换',
+    licenseTitle: 'License 激活',
+    licenseDesc: '输入 License Key 连接到云端 OpenClaw 服务，适合订阅制用户。',
+    licenseHint: '激活后由云端统一管理配置',
+    localTitle: '连接本地实例',
+    localDesc: '自动发现并连接本机已安装的 OpenClaw，适合私有部署用户。',
+    localHint: '配置存储在本地，完全离线可用',
+    initializing: '正在初始化...',
+    continue: '继续',
+    skip: '稍后设置',
+  },
+
+  // Local Connect
+  localConnect: {
+    idle: '连接本地 OpenClaw',
+    scanning: '正在搜索服务...',
+    pairing: '正在配对设备...',
+    restarting: '正在重启服务...',
+    connecting: '正在连接...',
+    done: '已连接',
+    error: '重试',
+    desc: '自动搜索并连接本地安装的 OpenClaw 服务（需本机安装，不支持容器）。首次连接会写入设备授权并重启服务。',
+    connected: '已连接到本地 OpenClaw',
+    errorMsg: '连接失败，查看下方日志，或手动重启 openclaw 服务后重试',
+    connectedBtn: '已连接',
   },
 
   // Settings
@@ -243,10 +323,10 @@ export const zh: Dict = {
     feishuConfig: '飞书配置',
     feishuConfigDesc: '配置飞书 App ID 和 App Secret，以启用飞书消息通道。',
     configureFeishu: '配置飞书',
-    apiConfig: '模型 API 配置',
+    apiConfig: '模型配置',
     apiConfigDesc: '手动覆盖节点当前模型配置，不会写回租户服务数据库。',
     openWizard: '打开配置向导',
-    activateFirst: '请先激活 License 后使用',
+    activateFirst: '当前网关暂未链接',
     approvalRules: '审批规则',
     always: '总是询问',
     sensitiveOnly: '敏感操作询问',
@@ -271,5 +351,22 @@ export const zh: Dict = {
     approvalBrowser: '浏览器自动化',
     approvalSystem: '系统操作',
     approvalVision: '视觉/OCR',
+    // Sections
+    sectionConnection: '连接方式',
+    sectionNode: '智能体',
+    sectionPreferences: '偏好设置',
+    current: '当前',
+    cloud: '云端',
+    local: '本地',
+    keyLabel: 'Key',
+    expiryLabel: '到期',
+    expiryPermanent: '永久',
+    licenseModalTitle: 'License 激活',
+    currentKeyLabel: '当前 Key',
+    expiryTimeLabel: '到期时间',
+    changeAndActivate: '更换并激活',
+    localModalTitle: '本地 OpenClaw',
+    modeCloud: 'License 云端',
+    modeLocal: '本地 OpenClaw',
   },
 }
