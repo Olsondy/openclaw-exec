@@ -92,19 +92,29 @@ export function WelcomeModal({ onDone }: Props) {
           })}
         </div>
 
-        {/* 确认按钮 */}
-        <button
-          type="button"
-          disabled={!selected || loading}
-          onClick={handleConfirm}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg
-            bg-primary text-primary-on text-sm font-medium
-            disabled:opacity-40 disabled:cursor-not-allowed
-            hover:opacity-90 transition-opacity"
-        >
-          {loading ? '正在初始化...' : '继续'}
-          {!loading && <ArrowRight size={15} />}
-        </button>
+        {/* 操作按钮 */}
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            disabled={!selected || loading}
+            onClick={handleConfirm}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg
+              bg-primary text-primary-on text-sm font-medium
+              disabled:opacity-40 disabled:cursor-not-allowed
+              hover:opacity-90 transition-opacity"
+          >
+            {loading ? '正在初始化...' : '继续'}
+            {!loading && <ArrowRight size={15} />}
+          </button>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={onDone}
+            className="w-full py-2 text-xs text-surface-on-variant hover:text-surface-on transition-colors disabled:opacity-40"
+          >
+            稍后设置
+          </button>
+        </div>
       </div>
     </div>
   )
