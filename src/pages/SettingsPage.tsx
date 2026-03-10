@@ -67,6 +67,10 @@ export function SettingsPage() {
   const doActivate = async () => {
     setShowConfirmKey(false)
     setLicenseKey(newKey.trim())
+    if (!connectionMode) {
+      await invoke('save_app_config', { config: { connectionMode: 'license' } })
+      setConnectionMode('license')
+    }
     await verifyAndConnect()
   }
 
@@ -75,26 +79,18 @@ export function SettingsPage() {
     setSwitchTarget(null)
   }
 
-  const handleLicenseCardClick = async () => {
+  const handleLicenseCardClick = () => {
     if (connectionMode === 'local') {
       setSwitchTarget('license')
     } else {
-      if (!connectionMode) {
-        await invoke('save_app_config', { config: { connectionMode: 'license' } })
-        setConnectionMode('license')
-      }
       setLicenseModalOpen(true)
     }
   }
 
-  const handleLocalCardClick = async () => {
+  const handleLocalCardClick = () => {
     if (connectionMode === 'license') {
       setSwitchTarget('local')
     } else {
-      if (!connectionMode) {
-        await invoke('save_app_config', { config: { connectionMode: 'local' } })
-        setConnectionMode('local')
-      }
       setLocalModalOpen(true)
     }
   }
@@ -398,7 +394,13 @@ export function SettingsPage() {
                 <X size={15} />
               </button>
             </div>
-            <LocalConnectPanel />
+            <LocalConnectPanel onConnected={async () => {
+              if (!connectionMode) {
+                await invoke('save_app_config', { config: { connectionMode: 'local' } })
+                setConnectionMode('local')
+              }
+              setLocalModalOpen(false)
+            }} />
           </div>
         </div>
       )}

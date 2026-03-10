@@ -15,7 +15,11 @@ const phaseLabel: Record<LocalConnectPhase, string> = {
   error: '重试',
 }
 
-export function LocalConnectPanel() {
+interface Props {
+  onConnected?: () => void
+}
+
+export function LocalConnectPanel({ onConnected }: Props) {
   const { connectLocal, phase, logs } = useLocalConnection()
   const { status, setStatus } = useConnectionStore()
   const logRef = useRef<HTMLDivElement>(null)
@@ -39,6 +43,7 @@ export function LocalConnectPanel() {
   // 监听 ws:connected 更新 phase
   useTauriEvent('ws:connected', () => {
     setStatus('online')
+    onConnected?.()
   })
 
   return (
