@@ -9,7 +9,6 @@ import { Toaster } from "./components/ui/sonner";
 import { useTauriEvent } from "./hooks/useTauri";
 import { useI18nStore } from "./i18n";
 import { ActivityPage } from "./pages/ActivityPage";
-import { CapabilitiesPage } from "./pages/CapabilitiesPage";
 import { ChannelPage } from "./pages/ChannelPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -81,7 +80,6 @@ function AppInner() {
 				<Route path="/" element={<AppLayout />}>
 					<Route index element={<DashboardPage />} />
 					<Route path="activity" element={<ActivityPage />} />
-					<Route path="capabilities" element={<CapabilitiesPage />} />
 					<Route path="channel" element={<ChannelPage />} />
 					<Route path="settings" element={<SettingsPage />} />
 				</Route>

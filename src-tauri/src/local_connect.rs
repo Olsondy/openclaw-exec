@@ -78,6 +78,52 @@ async fn discover_gateway_port(base_port: u16) -> Result<u16, String> {
     ))
 }
 
+async fn run_openclaw_daemon(action: &str) -> Result<String, String> {
+    let action = action.trim().to_lowercase();
+    if action != "stop" && action != "restart" {
+        return Err("仅支持 stop 或 restart".to_string());
+    }
+
+    let script = format!("openclaw daemon {}", action);
+    let output = if cfg!(target_os = "windows") {
+        tokio::process::Command::new("cmd")
+            .args(["/C", &script])
+            .output()
+            .await
+            .map_err(|e| format!("执行本地网关命令失败: {}", e))?
+    } else {
+        tokio::process::Command::new("sh")
+            .args(["-c", &script])
+            .output()
+            .await
+            .map_err(|e| format!("执行本地网关命令失败: {}", e))?
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+    if output.status.success() {
+        if stdout.is_empty() && stderr.is_empty() {
+            Ok(format!("openclaw daemon {} ok", action))
+        } else if stderr.is_empty() {
+            Ok(stdout)
+        } else if stdout.is_empty() {
+            Ok(stderr)
+        } else {
+            Ok(format!("{}\n{}", stdout, stderr))
+        }
+    } else {
+        let msg = if !stderr.is_empty() {
+            stderr
+        } else if !stdout.is_empty() {
+            stdout
+        } else {
+            format!("openclaw daemon {} failed", action)
+        };
+        Err(msg)
+    }
+}
+
 // ─── Tauri Command ───────────────────────────────────────────────
 
 #[tauri::command]
@@ -114,4 +160,9 @@ pub async fn local_connect(app: tauri::AppHandle) -> Result<LocalConnectResult, 
         device_name: format!("openclaw-mate-{}", &identity.device_id[..8]),
         restart_log: None,
     })
+}
+
+#[tauri::command]
+pub async fn local_gateway_daemon(action: String) -> Result<String, String> {
+    run_openclaw_daemon(&action).await
 }

@@ -27,6 +27,11 @@ const badgeColors: Record<
 	BROWSER: "info",
 	SYSTEM: "default",
 	VISION: "default",
+	browser: "info",
+	system: "default",
+	vision: "default",
+	gateway: "info",
+	event: "default",
 };
 
 interface ActivityItemProps {

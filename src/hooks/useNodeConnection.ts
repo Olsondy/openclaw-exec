@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
 import { toast } from "sonner";
+import { useT } from "../i18n";
 import { useConfigStore, useConnectionStore } from "../store";
 import type { VerifyResponse } from "../types";
 import { useTauriEvent } from "./useTauri";
@@ -23,6 +24,7 @@ interface DirectGatewayOptions {
 
 export function useNodeConnection() {
 	const { setStatus, setError, clearError } = useConnectionStore();
+	const t = useT();
 	const {
 		licenseKey,
 		connectionMode,
@@ -47,7 +49,7 @@ export function useNodeConnection() {
 
 	const verifyAndConnect = useCallback(async () => {
 		if (!licenseKey.trim()) {
-			toast.warning("请先在设置中配置 License Key");
+			toast.warning(t.settings.licenseKeyRequired);
 			return;
 		}
 
@@ -76,7 +78,7 @@ export function useNodeConnection() {
 
 			if (!result.success) {
 				setStatus("unauthorized");
-				setError("License Key 无效或已过期，请检查后重试");
+				setError(t.settings.licenseKeyInvalid);
 				return;
 			}
 
@@ -85,7 +87,9 @@ export function useNodeConnection() {
 			if (userProfile.licenseStatus !== "Valid") {
 				setStatus("unauthorized");
 				setError(
-					`授权状态异常：${userProfile.licenseStatus}，到期日：${userProfile.expiryDate}`,
+					t.settings.authStatusException
+						.replace("{status}", userProfile.licenseStatus || "-")
+						.replace("{expiry}", userProfile.expiryDate || "-"),
 				);
 				return;
 			}
@@ -119,6 +123,9 @@ export function useNodeConnection() {
 		setSessionMeta,
 		setStatus,
 		setUserProfile,
+		t.settings.authStatusException,
+		t.settings.licenseKeyInvalid,
+		t.settings.licenseKeyRequired,
 	]);
 
 	const connectDirectGateway = useCallback(
@@ -126,7 +133,7 @@ export function useNodeConnection() {
 			const gatewayUrl = opts.gatewayUrl.trim();
 			const gatewayToken = opts.gatewayToken?.trim() ?? "";
 			if (!gatewayUrl) {
-				setError("网关地址不能为空");
+				setError(t.settings.cloudGatewayAddrRequired);
 				return false;
 			}
 
@@ -149,8 +156,8 @@ export function useNodeConnection() {
 					deviceName,
 				});
 				setUserProfile({
-					licenseStatus: opts.profileLabel ?? "Direct",
-					expiryDate: "Direct Mode",
+					licenseStatus: opts.profileLabel ?? t.settings.modeLocal,
+					expiryDate: t.settings.directModeLabel,
 				});
 
 				await invoke("connect_gateway", {
@@ -168,7 +175,16 @@ export function useNodeConnection() {
 				return false;
 			}
 		},
-		[clearError, setError, setRuntimeConfig, setStatus, setUserProfile],
+		[
+			clearError,
+			setError,
+			setRuntimeConfig,
+			setStatus,
+			setUserProfile,
+			t.settings.cloudGatewayAddrRequired,
+			t.settings.directModeLabel,
+			t.settings.modeLocal,
+		],
 	);
 
 	const reconnectCurrent = useCallback(async () => {
@@ -177,20 +193,22 @@ export function useNodeConnection() {
 			return;
 		}
 		if (!runtimeConfig) {
-			setError("未找到可重连的网关配置，请先完成直连");
+			setError(t.settings.reconnectMissing);
 			return;
 		}
 		await connectDirectGateway({
 			gatewayUrl: runtimeConfig.gatewayUrl,
 			gatewayToken: runtimeConfig.gatewayToken,
 			gatewayWebUI: runtimeConfig.gatewayWebUI,
-			profileLabel: "Direct",
+			profileLabel: t.settings.modeLocal,
 		});
 	}, [
 		connectDirectGateway,
 		connectionMode,
 		runtimeConfig,
 		setError,
+		t.settings.modeLocal,
+		t.settings.reconnectMissing,
 		verifyAndConnect,
 	]);
 

@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { CheckCircle, Download, Loader2, TriangleAlert } from "lucide-react";
 import { useState } from "react";
+import { useT } from "../../../i18n";
 import { useConfigStore } from "../../../store";
 import type { ConnectionMode } from "../../../store/config.store";
 import { Button } from "../../ui";
@@ -29,6 +30,7 @@ export function SwitchModeDialog({
 	const [exportPath, setExportPath] = useState<string | null>(null);
 	const [exporting, setExporting] = useState(false);
 	const [confirming, setConfirming] = useState(false);
+	const t = useT();
 
 	const isLicenseToLocal = fromMode === "license" && toMode === "local";
 
@@ -100,23 +102,22 @@ export function SwitchModeDialog({
 				<div className="flex items-center gap-2">
 					<TriangleAlert size={16} className="text-yellow-500 shrink-0" />
 					<h3 className="text-sm font-semibold text-surface-on">
-						切换连接方式
+						{t.settings.switchModeTitle}
 					</h3>
 				</div>
 
 				{/* 说明 */}
 				<p className="text-xs text-surface-on-variant leading-relaxed">
 					{isLicenseToLocal
-						? "切换到本地模式后，当前云端连接将断开。云端的模型 API 配置和规则无法自动迁移，建议先导出配置快照留存。"
-						: "切换到 License 模式后，当前本地连接将断开。本地配对信息已保存，下次切换回来无需重新配对。"}
+						? t.settings.switchModeDescLicenseToLocal
+						: t.settings.switchModeDescLocalToLicense}
 				</p>
 
 				{/* License → Local：导出区域 */}
 				{isLicenseToLocal && (
 					<div className="rounded-lg border border-white/8 bg-surface p-3 space-y-2">
 						<p className="text-xs text-surface-on-variant">
-							导出内容：License Key、到期日、审批规则、模型配置快照（不含 API
-							Key）
+							{t.settings.switchModeExportSummary}
 						</p>
 						{exportPath ? (
 							<div className="flex items-center gap-2 text-xs text-green-500">
@@ -135,7 +136,9 @@ export function SwitchModeDialog({
 								) : (
 									<Download size={12} />
 								)}
-								{exporting ? "导出中..." : "导出配置快照"}
+								{exporting
+									? t.settings.switchModeExporting
+									: t.settings.switchModeExportAction}
 							</button>
 						)}
 					</div>
@@ -144,9 +147,9 @@ export function SwitchModeDialog({
 				{/* 清除项说明 */}
 				<ul className="text-xs text-surface-on-variant space-y-1 pl-1">
 					{[
-						"当前连接 Token / Gateway",
-						"License Key（或本地配对会话）",
-						"审批规则将重置为默认值",
+						t.settings.switchModeResetItemToken,
+						t.settings.switchModeResetItemSession,
+						t.settings.switchModeResetItemApproval,
 					].map((item) => (
 						<li key={item} className="flex items-start gap-1.5">
 							<span className="mt-0.5">•</span>
@@ -163,7 +166,7 @@ export function SwitchModeDialog({
 						onClick={onCancel}
 						disabled={confirming}
 					>
-						取消
+						{t.settings.cancel}
 					</Button>
 					<Button
 						className="flex-1"
@@ -173,7 +176,7 @@ export function SwitchModeDialog({
 						{confirming ? (
 							<Loader2 size={14} className="animate-spin" />
 						) : (
-							"确认切换"
+							t.settings.switchModeConfirm
 						)}
 					</Button>
 				</div>

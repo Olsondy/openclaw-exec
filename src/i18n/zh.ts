@@ -26,6 +26,8 @@ export type Dict = {
 		status: string;
 		totalTasks: string;
 		successTasks: string;
+		openclawVersion: string;
+		configuredModels: string;
 		efficiency: string;
 		avgDuration: string;
 		successRate: string;
@@ -59,10 +61,16 @@ export type Dict = {
 		nodeIdle: string;
 	};
 	activity: {
+		auditLogs: string;
+		gatewayLogs: string;
 		all: string;
 		errors: string;
 		successes: string;
 		warnings: string;
+		levelLabel: string;
+		keywordLabel: string;
+		keywordPlaceholder: string;
+		clearFilters: string;
 		noLogs: string;
 	};
 	capabilities: {
@@ -107,6 +115,12 @@ export type Dict = {
 		connected: string;
 		errorMsg: string;
 		connectedBtn: string;
+		logRestartHeader: string;
+		logRestartFooter: string;
+		logFoundService: string;
+		logAuthConnecting: string;
+		logConnectedSuccess: string;
+		logErrorPrefix: string;
 	};
 	settings: {
 		licenseActivation: string;
@@ -134,7 +148,6 @@ export type Dict = {
 		apiConfig: string;
 		apiConfigDesc: string;
 		openWizard: string;
-		activateFirst: string;
 		approvalRules: string;
 		always: string;
 		sensitiveOnly: string;
@@ -147,6 +160,8 @@ export type Dict = {
 		confirmChange: string;
 		appearance: string;
 		language: string;
+		localeZh: string;
+		localeEn: string;
 		themeColor: string;
 		themeLight: string;
 		themeDark: string;
@@ -157,6 +172,8 @@ export type Dict = {
 		approvalBrowser: string;
 		approvalSystem: string;
 		approvalVision: string;
+		capabilitiesTitle: string;
+		capabilitiesDesc: string;
 		sectionConnection: string;
 		sectionNode: string;
 		sectionPreferences: string;
@@ -170,6 +187,7 @@ export type Dict = {
 		currentKeyLabel: string;
 		expiryTimeLabel: string;
 		changeAndActivate: string;
+		licenseKeyPlaceholder: string;
 		localModalTitle: string;
 		directModalTitle: string;
 		directSelectHint: string;
@@ -179,9 +197,40 @@ export type Dict = {
 		directCloudDesc: string;
 		backToSelect: string;
 		cloudGatewayAddr: string;
+		cloudGatewayAddrPlaceholder: string;
 		cloudGatewayToken: string;
 		cloudGatewayTokenPlaceholder: string;
 		connectNow: string;
+		localStop: string;
+		localRestart: string;
+		cloudDisconnect: string;
+		cloudRestart: string;
+		cloudGatewayAddrRequired: string;
+		actionLocalStopping: string;
+		actionLocalStopped: string;
+		actionLocalRestarting: string;
+		actionLocalRestarted: string;
+		actionCloudConnecting: string;
+		actionCloudConnected: string;
+		actionCloudDisconnecting: string;
+		actionCloudDisconnected: string;
+		actionCloudRestarting: string;
+		actionCloudRestarted: string;
+		licenseKeyRequired: string;
+		licenseKeyInvalid: string;
+		authStatusException: string;
+		reconnectMissing: string;
+		directModeLabel: string;
+		switchModeTitle: string;
+		switchModeDescLicenseToLocal: string;
+		switchModeDescLocalToLicense: string;
+		switchModeExportSummary: string;
+		switchModeExporting: string;
+		switchModeExportAction: string;
+		switchModeResetItemToken: string;
+		switchModeResetItemSession: string;
+		switchModeResetItemApproval: string;
+		switchModeConfirm: string;
 		modeCloud: string;
 		modeLocal: string;
 	};
@@ -190,9 +239,9 @@ export type Dict = {
 export const zh: Dict = {
 	// Sidebar
 	sidebar: {
-		dashboard: "控制面板",
-		activity: "最近动态",
-		channel: "通道配置",
+		dashboard: "仪表盘",
+		activity: "活动日志",
+		channel: "消息渠道",
 		capabilities: "节点能力",
 		settings: "设置",
 		devConsole: "开发者控制台",
@@ -217,8 +266,10 @@ export const zh: Dict = {
 	// Dashboard
 	dashboard: {
 		status: "当前状态",
-		totalTasks: "总任务",
+		totalTasks: "事件总数",
 		successTasks: "成功记录",
+		openclawVersion: "OpenClaw 版本",
+		configuredModels: "已配置模型数",
 		efficiency: "执行效率",
 		avgDuration: "平均响应耗时",
 		successRate: "成功率",
@@ -254,10 +305,16 @@ export const zh: Dict = {
 
 	// Activity
 	activity: {
+		auditLogs: "审计日志",
+		gatewayLogs: "Gateway 日志",
 		all: "全部动态",
 		errors: "错误",
 		successes: "成功",
 		warnings: "警告",
+		levelLabel: "级别",
+		keywordLabel: "关键词",
+		keywordPlaceholder: "按标题、描述或标签筛选",
+		clearFilters: "清空筛选",
 		noLogs: "暂无活动日志",
 	},
 
@@ -294,7 +351,7 @@ export const zh: Dict = {
 		licenseDesc: "输入租户 License Key，由租户服务返回网关连接参数。",
 		licenseHint: "适合 SaaS 租户接入场景",
 		localTitle: "直连网关",
-		localDesc: "直接连接网关（本地自动探测，或手动输入云端网关地址）。",
+		localDesc: "直接连接网关（本地自动探测，或手动输入网关地址）。",
 		localHint: "适合私有部署与自托管场景",
 		initializing: "正在初始化...",
 		continue: "继续",
@@ -303,17 +360,23 @@ export const zh: Dict = {
 
 	// Local Connect
 	localConnect: {
-		idle: "连接本地 OpenClaw",
+		idle: "本地链接",
 		scanning: "正在搜索服务...",
 		pairing: "正在准备连接参数...",
 		restarting: "等待服务就绪...",
 		connecting: "正在连接...",
 		done: "已连接",
 		error: "重试",
-		desc: "自动搜索并连接本地安装的 OpenClaw Gateway（只读探测，不改写本地配置）。",
+		desc: "自动搜索并连接本地安装的 OpenClaw",
 		connected: "已连接到本地 OpenClaw",
 		errorMsg: "连接失败，查看下方日志，或手动重启 openclaw 服务后重试",
 		connectedBtn: "已连接",
+		logRestartHeader: "--- 重启日志 ---",
+		logRestartFooter: "--- 结束 ---",
+		logFoundService: "发现服务：{url}",
+		logAuthConnecting: "设备授权完成，正在连接...",
+		logConnectedSuccess: "连接成功",
+		logErrorPrefix: "错误：{error}",
 	},
 
 	// Settings
@@ -343,7 +406,6 @@ export const zh: Dict = {
 		apiConfig: "模型配置",
 		apiConfigDesc: "手动覆盖节点当前模型配置，不会写回租户服务数据库。",
 		openWizard: "打开配置向导",
-		activateFirst: "当前网关暂未链接",
 		approvalRules: "审批规则",
 		always: "总是询问",
 		sensitiveOnly: "敏感操作询问",
@@ -358,6 +420,8 @@ export const zh: Dict = {
 		// Appearance
 		appearance: "外观",
 		language: "语言",
+		localeZh: "中文",
+		localeEn: "English",
 		themeColor: "主题",
 		themeLight: "浅色",
 		themeDark: "深色",
@@ -368,6 +432,8 @@ export const zh: Dict = {
 		approvalBrowser: "浏览器自动化",
 		approvalSystem: "系统操作",
 		approvalVision: "视觉/OCR",
+		capabilitiesTitle: "节点能力",
+		capabilitiesDesc: "控制智能体可用能力，建议与审批规则配合使用。",
 		// Sections
 		sectionConnection: "连接方式",
 		sectionNode: "智能体",
@@ -382,18 +448,54 @@ export const zh: Dict = {
 		currentKeyLabel: "当前 Key",
 		expiryTimeLabel: "到期时间",
 		changeAndActivate: "更换并连接",
-		localModalTitle: "本地 OpenClaw",
-		directModalTitle: "直连网关",
-		directSelectHint: "请选择直连目标。",
-		directLocalGateway: "本地网关",
-		directLocalDesc: "自动探测本机已安装的网关并直连",
-		directCloudGateway: "云端网关",
-		directCloudDesc: "手动输入云端网关地址直连",
+		licenseKeyPlaceholder: "XXXX-XXXX-XXXX-XXXX",
+		localModalTitle: "本地",
+		directModalTitle: "直连",
+		directSelectHint: "请选择直连方式。",
+		directLocalGateway: "本地",
+		directLocalDesc: "自动探测本机已安装的网关",
+		directCloudGateway: "地址",
+		directCloudDesc: "手动输入网关地址直连（可本地/局域网/云端）",
 		backToSelect: "返回选择",
-		cloudGatewayAddr: "云端网关地址",
+		cloudGatewayAddr: "网关地址",
+		cloudGatewayAddrPlaceholder:
+			"ws://127.0.0.1:18789 或 wss://gateway.example.com:18789",
 		cloudGatewayToken: "网关 Token（可选）",
 		cloudGatewayTokenPlaceholder: "留空表示无鉴权或由代理鉴权",
 		connectNow: "立即连接",
+		localStop: "停止",
+		localRestart: "重启",
+		cloudDisconnect: "断开",
+		cloudRestart: "重启",
+		cloudGatewayAddrRequired: "请先输入网关地址",
+		actionLocalStopping: "正在停止本地网关...",
+		actionLocalStopped: "本地网关已停止",
+		actionLocalRestarting: "正在重启本地网关...",
+		actionLocalRestarted: "本地网关重启并连接成功",
+		actionCloudConnecting: "正在连接网关地址...",
+		actionCloudConnected: "网关连接成功",
+		actionCloudDisconnecting: "正在断开网关连接...",
+		actionCloudDisconnected: "网关已断开",
+		actionCloudRestarting: "正在重连网关...",
+		actionCloudRestarted: "网关重连成功",
+		licenseKeyRequired: "请先在设置中配置 License Key",
+		licenseKeyInvalid: "License Key 无效或已过期，请检查后重试",
+		authStatusException: "授权状态异常：{status}，到期日：{expiry}",
+		reconnectMissing: "未找到可重连的网关配置，请先完成直连",
+		directModeLabel: "直连模式",
+		switchModeTitle: "切换连接方式",
+		switchModeDescLicenseToLocal:
+			"切换到本地模式后，当前云端连接将断开。云端的模型 API 配置和规则无法自动迁移，建议先导出配置快照留存。",
+		switchModeDescLocalToLicense:
+			"切换到租户模式后，当前本地连接将断开。本地配对信息已保存，下次切换回来无需重新配对。",
+		switchModeExportSummary:
+			"导出内容：License Key、到期日、审批规则、模型配置快照（不含 API Key）",
+		switchModeExporting: "导出中...",
+		switchModeExportAction: "导出配置快照",
+		switchModeResetItemToken: "当前连接 Token / Gateway",
+		switchModeResetItemSession: "License Key（或本地配对会话）",
+		switchModeResetItemApproval: "审批规则将重置为默认值",
+		switchModeConfirm: "确认切换",
 		modeCloud: "租户连接",
 		modeLocal: "网关直连",
 	},

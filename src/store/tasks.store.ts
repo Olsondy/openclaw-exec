@@ -47,11 +47,22 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
 	getStats: () => {
 		const { logs } = get();
+		const taskLogs = logs.filter((log) => !isGatewayLog(log));
 		return {
-			total: logs.length,
-			success: logs.filter((l) => l.level === "success").length,
-			error: logs.filter((l) => l.level === "error").length,
-			pending: logs.filter((l) => l.level === "pending").length,
+			total: taskLogs.length,
+			success: taskLogs.filter((l) => l.level === "success").length,
+			error: taskLogs.filter((l) => l.level === "error").length,
+			pending: taskLogs.filter((l) => l.level === "pending").length,
 		};
 	},
 }));
+
+function isGatewayLog(log: ActivityLog): boolean {
+	if (log.title.toLowerCase().startsWith("gateway:")) {
+		return true;
+	}
+	return log.tags.some((tag) => {
+		const normalized = tag.toLowerCase();
+		return normalized === "gateway" || normalized === "event";
+	});
+}

@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useState } from "react";
+import { useT } from "../i18n";
 import { useConfigStore, useConnectionStore } from "../store";
 
 interface LocalConnectResult {
@@ -29,6 +30,7 @@ export type LocalConnectPhase =
 export function useLocalConnection() {
 	const { setStatus, setError } = useConnectionStore();
 	const { setRuntimeConfig, setUserProfile } = useConfigStore();
+	const t = useT();
 
 	const [phase, setPhase] = useState<LocalConnectPhase>("idle");
 	const [logs, setLogs] = useState<string[]>([]);
@@ -39,26 +41,28 @@ export function useLocalConnection() {
 	const connectLocal = useCallback(async () => {
 		setPhase("scanning");
 		setLogs([]);
-		appendLog("正在搜索本地 openclaw 服务...");
+		appendLog(t.localConnect.scanning);
 		setStatus("auth_checking");
 		setError("");
 
 		try {
 			setPhase("pairing");
-			appendLog("正在准备本地连接参数...");
+			appendLog(t.localConnect.pairing);
 
 			const result = await invoke<LocalConnectResult>("local_connect");
 			const identity = await invoke<DeviceIdentity>("get_device_identity");
 
 			if (result.restart_log) {
-				appendLog("--- 重启日志 ---");
+				appendLog(t.localConnect.logRestartHeader);
 				result.restart_log.split("\n").forEach((line) => appendLog(line));
-				appendLog("--- end ---");
+				appendLog(t.localConnect.logRestartFooter);
 				setPhase("restarting");
 			}
 
-			appendLog(`发现服务：${result.gateway_url}`);
-			appendLog("设备授权完成，正在连接...");
+			appendLog(
+				t.localConnect.logFoundService.replace("{url}", result.gateway_url),
+			);
+			appendLog(t.localConnect.logAuthConnecting);
 			setPhase("connecting");
 			setStatus("connecting");
 
@@ -71,8 +75,8 @@ export function useLocalConnection() {
 			});
 
 			setUserProfile({
-				licenseStatus: "Direct",
-				expiryDate: "Direct Mode",
+				licenseStatus: t.settings.modeLocal,
+				expiryDate: t.settings.directModeLabel,
 			});
 
 			await invoke("connect_gateway", {
@@ -85,15 +89,30 @@ export function useLocalConnection() {
 			});
 
 			setPhase("done");
-			appendLog("连接成功");
+			appendLog(t.localConnect.logConnectedSuccess);
 		} catch (e) {
 			const msg = String(e);
 			setPhase("error");
 			setStatus("error");
 			setError(msg);
-			appendLog(`错误: ${msg}`);
+			appendLog(t.localConnect.logErrorPrefix.replace("{error}", msg));
 		}
-	}, [setError, setRuntimeConfig, setStatus, setUserProfile]);
+	}, [
+		setError,
+		setRuntimeConfig,
+		setStatus,
+		setUserProfile,
+		t.localConnect.logAuthConnecting,
+		t.localConnect.logConnectedSuccess,
+		t.localConnect.logErrorPrefix,
+		t.localConnect.logFoundService,
+		t.localConnect.logRestartFooter,
+		t.localConnect.logRestartHeader,
+		t.localConnect.pairing,
+		t.localConnect.scanning,
+		t.settings.directModeLabel,
+		t.settings.modeLocal,
+	]);
 
 	return { connectLocal, phase, logs };
 }

@@ -86,10 +86,10 @@ export function useTaskHandler() {
 					id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
 					timestamp: new Date(),
 					task_id: "",
-					level: "info",
-					title: `事件: ${data.event}`,
+					level: inferGatewayEventLevel(data.event),
+					title: `Gateway: ${data.event}`,
 					description: JSON.stringify(data.payload ?? {}).slice(0, 200),
-					tags: ["event"],
+					tags: ["gateway", "event", data.event],
 				};
 				addLog(log);
 			},
@@ -105,4 +105,30 @@ function formatDescription(task: WsTaskPayload): string {
 		return `$ ${String(payload.command)}`;
 	}
 	return JSON.stringify(payload).slice(0, 200);
+}
+
+function inferGatewayEventLevel(eventName: string): ActivityLog["level"] {
+	const normalized = eventName.toLowerCase();
+	if (
+		normalized.includes("error") ||
+		normalized.includes("fail") ||
+		normalized.includes("reject")
+	) {
+		return "error";
+	}
+	if (
+		normalized.includes("warn") ||
+		normalized.includes("required") ||
+		normalized.includes("timeout")
+	) {
+		return "warning";
+	}
+	if (
+		normalized.includes("resolved") ||
+		normalized.includes("success") ||
+		normalized.includes("connected")
+	) {
+		return "success";
+	}
+	return "info";
 }

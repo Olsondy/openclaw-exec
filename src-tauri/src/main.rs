@@ -121,6 +121,7 @@ fn main() {
             open_cloud_console,
             install_update,
             local_connect::local_connect,
+            local_connect::local_gateway_daemon,
             profile_store::get_app_config,
             profile_store::save_app_config,
             profile_store::get_license_profile,

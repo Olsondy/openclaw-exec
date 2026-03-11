@@ -8,11 +8,14 @@ import type {
 } from "../types";
 
 export type ConnectionMode = "license" | "local";
+export type DirectMode = "local" | "cloud";
 
 /** 持久化至本地的设置 */
 interface PersistedSettings {
 	licenseKey: string;
 	expiryDate: string;
+	directMode: DirectMode | null;
+	directCloudAddress: string;
 }
 
 interface ConfigState {
@@ -26,6 +29,10 @@ interface ConfigState {
 
 	/** 连接模式：null 表示首次启动未选择，从 ~/clawmate/config.json 加载 */
 	connectionMode: ConnectionMode | null;
+	/** 直连子模式：本地网关 / 云端网关 */
+	directMode: DirectMode | null;
+	/** 云端直连地址（用于下次回显） */
+	directCloudAddress: string;
 
 	setLicenseKey: (key: string) => void;
 	setRuntimeConfig: (config: NodeRuntimeConfig) => void;
@@ -38,6 +45,8 @@ interface ConfigState {
 	) => void;
 	setSessionMeta: (meta: { licenseId: number }) => void;
 	setConnectionMode: (mode: ConnectionMode | null) => void;
+	setDirectMode: (mode: DirectMode | null) => void;
+	setDirectCloudAddress: (address: string) => void;
 	/** 切换模式时清除会话数据，但不清除 connectionMode 本身 */
 	resetForModeSwitch: () => void;
 }
@@ -65,6 +74,8 @@ export const useConfigStore = create<ConfigState>()(
 			approvalRules: defaultApprovalRules,
 			licenseId: null,
 			connectionMode: null,
+			directMode: null,
+			directCloudAddress: "",
 
 			setLicenseKey: (licenseKey) => set({ licenseKey }),
 
@@ -92,6 +103,9 @@ export const useConfigStore = create<ConfigState>()(
 			setSessionMeta: ({ licenseId }) => set({ licenseId }),
 
 			setConnectionMode: (connectionMode) => set({ connectionMode }),
+			setDirectMode: (directMode) => set({ directMode }),
+			setDirectCloudAddress: (directCloudAddress) =>
+				set({ directCloudAddress }),
 
 			resetForModeSwitch: () =>
 				set({
@@ -108,6 +122,8 @@ export const useConfigStore = create<ConfigState>()(
 			partialize: (state): PersistedSettings => ({
 				licenseKey: state.licenseKey,
 				expiryDate: state.expiryDate,
+				directMode: state.directMode,
+				directCloudAddress: state.directCloudAddress,
 			}),
 		},
 	),

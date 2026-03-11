@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-	Activity,
-	Cpu,
+	ClipboardList,
 	LayoutDashboard,
 	Loader2,
 	MessageSquare,
@@ -29,9 +28,8 @@ export function Sidebar() {
 
 	const navItems = [
 		{ to: "/", icon: LayoutDashboard, label: t.sidebar.dashboard },
-		{ to: "/activity", icon: Activity, label: t.sidebar.activity },
+		{ to: "/activity", icon: ClipboardList, label: t.sidebar.activity },
 		{ to: "/channel", icon: MessageSquare, label: t.sidebar.channel },
-		{ to: "/capabilities", icon: Cpu, label: t.sidebar.capabilities },
 	];
 
 	const openConsole = async () => {
@@ -66,9 +64,6 @@ export function Sidebar() {
 				{/* 网关状态：呼吸灯 + 文字 + 重连 */}
 				{!collapsed ? (
 					<div className="flex flex-nowrap items-center gap-1.5 ml-auto overflow-hidden">
-						<span className="text-xs whitespace-nowrap shrink-0 text-surface-on-variant">
-							{t.sidebar.gatewayLabel}
-						</span>
 						<span
 							className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border ${
 								isOnline

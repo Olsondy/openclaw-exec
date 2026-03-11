@@ -16,7 +16,7 @@ export function ChannelPage() {
 
 	return (
 		<>
-			<TopBar title={t.sidebar.channel} subtitle={t.topbar.channelSub} />
+			<TopBar title={t.sidebar.channel} />
 			<div className="flex-1 overflow-auto p-6 space-y-4 max-w-2xl">
 				{/* 飞书配置卡片 */}
 				<Card>

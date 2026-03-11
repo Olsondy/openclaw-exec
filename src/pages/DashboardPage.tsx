@@ -6,13 +6,16 @@ import {
 	CheckCircle2,
 	ClipboardList,
 	Clock,
+	Cpu,
 	Download,
 	HelpCircle,
+	Server,
 	XCircle,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TopBar } from "../components/layout/TopBar";
 import { Card } from "../components/ui";
+import { useOperatorConnection } from "../hooks/useOperatorConnection";
 import { useUpdater } from "../hooks/useUpdater";
 import { useT } from "../i18n";
 import { useConnectionStore, useTasksStore } from "../store";
@@ -29,19 +32,66 @@ export function DashboardPage() {
 	const { errorMessage } = useConnectionStore();
 	const { logs, pendingApprovals, getStats } = useTasksStore();
 	const { newVersion, installing, installUpdate } = useUpdater();
+	const { opCall, status: operatorStatus } = useOperatorConnection();
 	const t = useT();
+	const [gatewayVersion, setGatewayVersion] = useState("--");
+	const [configuredModelsCount, setConfiguredModelsCount] = useState<
+		number | null
+	>(null);
 
 	const stats = getStats();
-	const isEmpty = logs.length === 0;
+	const taskLogs = useMemo(
+		() => logs.filter((log) => !isGatewayLog(log)),
+		[logs],
+	);
+	const isEmpty = taskLogs.length === 0;
 	const successRate =
 		stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : 0;
+
+	useEffect(() => {
+		let cancelled = false;
+
+		if (operatorStatus !== "connected") {
+			setGatewayVersion("--");
+			setConfiguredModelsCount(null);
+			return () => {
+				cancelled = true;
+			};
+		}
+
+		const loadDashboardMeta = async () => {
+			const [presenceRes, modelsRes] = await Promise.all([
+				opCall("system-presence", {}),
+				opCall("models.list", {}),
+			]);
+			if (cancelled) {
+				return;
+			}
+
+			const resolvedVersion = resolveGatewayVersion(presenceRes.payload);
+			setGatewayVersion(resolvedVersion ?? "--");
+			setConfiguredModelsCount(resolveConfiguredModelsCount(modelsRes.payload));
+		};
+
+		loadDashboardMeta().catch(() => {
+			if (cancelled) {
+				return;
+			}
+			setGatewayVersion("--");
+			setConfiguredModelsCount(null);
+		});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [operatorStatus, opCall]);
 
 	const typeBreakdown = useMemo(() => {
 		const map: Record<
 			string,
 			{ total: number; success: number; error: number }
 		> = {};
-		for (const log of logs) {
+		for (const log of taskLogs) {
 			const ty = log.task_type ?? "unknown";
 			if (!map[ty]) map[ty] = { total: 0, success: 0, error: 0 };
 			map[ty].total++;
@@ -49,11 +99,11 @@ export function DashboardPage() {
 			if (log.level === "error") map[ty].error++;
 		}
 		return map;
-	}, [logs]);
+	}, [taskLogs]);
 
 	const avgDurationByType = useMemo(() => {
 		const map: Record<string, { total: number; count: number }> = {};
-		for (const log of logs) {
+		for (const log of taskLogs) {
 			if (log.duration_ms == null || log.duration_ms <= 0) continue;
 			const ty = log.task_type ?? "unknown";
 			if (!map[ty]) map[ty] = { total: 0, count: 0 };
@@ -65,11 +115,11 @@ export function DashboardPage() {
 			result[k] = Math.round(v.total / v.count);
 		}
 		return result;
-	}, [logs]);
+	}, [taskLogs]);
 
 	return (
 		<>
-			<TopBar title={t.sidebar.dashboard} subtitle={t.topbar.dashboardSub} />
+			<TopBar title={t.sidebar.dashboard} />
 			<div className="flex-1 overflow-auto p-6 space-y-4">
 				{/* 更新提示 */}
 				{newVersion && (
@@ -93,8 +143,8 @@ export function DashboardPage() {
 					</div>
 				)}
 
-				{/* 2 个统计卡片 */}
-				<div className="grid grid-cols-2 gap-3">
+				{/* 4 个概要卡片 */}
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 					<Card className="flex items-center gap-4 py-3 px-4">
 						<div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-500/10 text-indigo-500 shrink-0">
 							<ClipboardList size={15} />
@@ -127,6 +177,34 @@ export function DashboardPage() {
 									</span>
 								)}
 							</div>
+						</div>
+					</Card>
+
+					<Card className="flex items-center gap-4 py-3 px-4">
+						<div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sky-500/10 text-sky-500 shrink-0">
+							<Server size={15} />
+						</div>
+						<div>
+							<p className="text-[11px] text-surface-on-variant mb-0.5">
+								{t.dashboard.openclawVersion}
+							</p>
+							<p className="text-xl font-bold text-surface-on tabular-nums">
+								{gatewayVersion}
+							</p>
+						</div>
+					</Card>
+
+					<Card className="flex items-center gap-4 py-3 px-4">
+						<div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/10 text-purple-500 shrink-0">
+							<Cpu size={15} />
+						</div>
+						<div>
+							<p className="text-[11px] text-surface-on-variant mb-0.5">
+								{t.dashboard.configuredModels}
+							</p>
+							<p className="text-xl font-bold text-surface-on tabular-nums">
+								{configuredModelsCount ?? "--"}
+							</p>
 						</div>
 					</Card>
 				</div>
@@ -188,9 +266,9 @@ export function DashboardPage() {
 				)}
 
 				{/* 主内容：活动日志 + 任务分布 */}
-				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+				<div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)] gap-4">
 					{/* 活动日志 */}
-					<Card className="lg:col-span-2 flex flex-col" style={{ height: 420 }}>
+					<Card className="flex flex-col" style={{ height: 420 }}>
 						<div className="flex items-center justify-between mb-3">
 							<h2 className="text-xs font-semibold text-surface-on flex items-center gap-2">
 								<Activity size={13} className="text-primary" />
@@ -207,7 +285,7 @@ export function DashboardPage() {
 									<p className="text-xs">{t.dashboard.noActivity}</p>
 								</div>
 							) : (
-								logs.map((log) => <TaskLogRow key={log.id} log={log} />)
+								taskLogs.map((log) => <TaskLogRow key={log.id} log={log} />)
 							)}
 						</div>
 					</Card>
@@ -266,6 +344,51 @@ export function DashboardPage() {
 			</div>
 		</>
 	);
+}
+
+function isGatewayLog(log: ActivityLog): boolean {
+	if (log.title.toLowerCase().startsWith("gateway:")) {
+		return true;
+	}
+	return log.tags.some((tag) => {
+		const normalized = tag.toLowerCase();
+		return normalized === "gateway" || normalized === "event";
+	});
+}
+
+function resolveGatewayVersion(payload: unknown): string | null {
+	if (!Array.isArray(payload)) {
+		return null;
+	}
+	for (const item of payload) {
+		if (!item || typeof item !== "object") {
+			continue;
+		}
+		const entry = item as Record<string, unknown>;
+		const mode = typeof entry.mode === "string" ? entry.mode.toLowerCase() : "";
+		const reason =
+			typeof entry.reason === "string" ? entry.reason.toLowerCase() : "";
+		const version =
+			typeof entry.version === "string" ? entry.version.trim() : "";
+		if (!version) {
+			continue;
+		}
+		if (mode === "gateway" || reason === "self") {
+			return version;
+		}
+	}
+	return null;
+}
+
+function resolveConfiguredModelsCount(payload: unknown): number | null {
+	if (!payload || typeof payload !== "object") {
+		return null;
+	}
+	const models = (payload as { models?: unknown }).models;
+	if (!Array.isArray(models)) {
+		return null;
+	}
+	return models.length;
 }
 
 function TaskLogRow({ log }: { log: ActivityLog }) {

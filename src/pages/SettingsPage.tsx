@@ -1,26 +1,32 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
 	AlertCircle,
-	Cloud,
+	ArrowLeft,
+	Cable,
 	Cpu,
+	Eye,
+	Globe,
+	HardDrive,
 	KeyRound,
 	Languages,
 	Loader2,
-	MessageSquare,
 	Monitor,
 	Moon,
 	Palette,
+	Power,
+	RotateCw,
+	Server,
 	Shield,
 	Sun,
 	TriangleAlert,
+	Unplug,
 	X,
 } from "lucide-react";
 import { useState } from "react";
-import { LocalConnectPanel } from "../components/features/settings/LocalConnectPanel";
+import { toast } from "sonner";
 import { ApiWizard } from "../components/features/wizard/ApiWizard";
-import { FeishuWizard } from "../components/features/wizard/FeishuWizard";
 import { TopBar } from "../components/layout/TopBar";
-import { Button, Card } from "../components/ui";
+import { Button, Card, Switch } from "../components/ui";
 import { useNodeConnection } from "../hooks/useNodeConnection";
 import type { Locale, Theme } from "../i18n";
 import { useI18nStore, useT } from "../i18n";
@@ -70,12 +76,19 @@ export function SettingsPage() {
 		licenseKey,
 		expiryDate,
 		setLicenseKey,
+		capabilities,
+		toggleCapability,
 		approvalRules,
 		setApprovalRule,
 		connectionMode,
 		setConnectionMode,
+		directMode,
+		setDirectMode,
+		directCloudAddress,
+		setDirectCloudAddress,
+		runtimeConfig,
 	} = useConfigStore();
-	const { status, errorMessage } = useConnectionStore();
+	const { status, errorMessage, setStatus } = useConnectionStore();
 	const { verifyAndConnect, connectDirectGateway } = useNodeConnection();
 	const t = useT();
 	const { locale, theme, setLocale, setTheme } = useI18nStore();
@@ -84,23 +97,71 @@ export function SettingsPage() {
 	const [showConfirmKey, setShowConfirmKey] = useState(false);
 	const [licenseModalOpen, setLicenseModalOpen] = useState(false);
 	const [directModalOpen, setDirectModalOpen] = useState(false);
-	const [directTarget, setDirectTarget] = useState<"local" | "cloud" | null>(
-		null,
-	);
-	const [directAddress, setDirectAddress] = useState("");
+	const [directTarget, setDirectTarget] = useState<"cloud" | null>(null);
+	const [directAddress, setDirectAddress] = useState(directCloudAddress);
 	const [directToken, setDirectToken] = useState("");
 	const [directLoading, setDirectLoading] = useState(false);
-	const [feishuWizardOpen, setFeishuWizardOpen] = useState(false);
+	const [directActionLoading, setDirectActionLoading] = useState<
+		| "local-connect"
+		| "local-stop"
+		| "local-restart"
+		| "cloud-disconnect"
+		| "cloud-restart"
+		| null
+	>(null);
 	const [apiWizardOpen, setApiWizardOpen] = useState(false);
 
 	const isLoading = status === "auth_checking" || status === "connecting";
-	const isOnline = status === "online";
 	const hasKey = Boolean(licenseKey);
+	const isOnline = status === "online";
+
+	// Debug: 观察关键状态
+	console.log(
+		"[Settings] render — status:",
+		status,
+		"connectionMode:",
+		connectionMode,
+		"directMode:",
+		directMode,
+		"isOnline:",
+		isOnline,
+		"isDirectConnected:",
+		connectionMode === "local" && isOnline,
+		"isLocalConnected:",
+		connectionMode === "local" && isOnline && directMode === "local",
+		"isCloudConnected:",
+		connectionMode === "local" && isOnline && directMode === "cloud",
+	);
+
+	const isDirectConnected = connectionMode === "local" && isOnline;
+	const isLocalConnected = isDirectConnected && directMode === "local";
+	const isCloudConnected = isDirectConnected && directMode === "cloud";
+	const directBusy = directLoading || directActionLoading !== null;
 
 	const THEMES: { key: Theme; label: string; icon: React.ElementType }[] = [
 		{ key: "light", label: t.settings.themeLight, icon: Sun },
 		{ key: "dark", label: t.settings.themeDark, icon: Moon },
 		{ key: "system", label: t.settings.themeSystem, icon: Monitor },
+	];
+	const capabilityItems = [
+		{
+			key: "browser" as const,
+			icon: Globe,
+			title: t.capabilities.browser,
+			description: t.capabilities.browserDesc,
+		},
+		{
+			key: "system" as const,
+			icon: Monitor,
+			title: t.capabilities.system,
+			description: t.capabilities.systemDesc,
+		},
+		{
+			key: "vision" as const,
+			icon: Eye,
+			title: t.capabilities.vision,
+			description: t.capabilities.visionDesc,
+		},
 	];
 
 	const doActivate = async () => {
@@ -119,28 +180,184 @@ export function SettingsPage() {
 
 	const handleDirectCardClick = () => {
 		setDirectTarget(null);
+		setDirectAddress(directCloudAddress);
 		setDirectModalOpen(true);
+	};
+
+	const closeDirectModalSuccess = (msg: string) => {
+		toast.success(msg);
+		setDirectModalOpen(false);
+	};
+
+	const disconnectGatewaySession = async () => {
+		await invoke("disconnect_gateway");
+		await invoke("op_disconnect").catch(() => {});
+		setStatus("idle");
 	};
 
 	const doConnectDirectCloud = async () => {
 		if (!directAddress.trim()) return;
 		setDirectLoading(true);
 		try {
+			console.log("[Settings] doConnectDirectCloud: starting...");
+			toast.message(t.settings.actionCloudConnecting);
 			const normalized = normalizeGatewayEndpoint(directAddress);
 			const ok = await connectDirectGateway({
 				gatewayUrl: normalized.gatewayUrl,
 				gatewayWebUI: normalized.gatewayWebUI,
 				gatewayToken: directToken.trim(),
-				profileLabel: "Direct Cloud",
+				profileLabel: t.settings.directCloudGateway,
 			});
+			console.log(
+				"[Settings] doConnectDirectCloud: connectDirectGateway ok =",
+				ok,
+			);
 			if (!ok) return;
+			setDirectMode("cloud");
+			setDirectCloudAddress(directAddress.trim());
 			await invoke("save_app_config", {
 				config: { connectionMode: "local" },
 			});
 			setConnectionMode("local");
-			setDirectModalOpen(false);
+			console.log("[Settings] doConnectDirectCloud: done, closing modal");
+			closeDirectModalSuccess(t.settings.actionCloudConnected);
 		} finally {
 			setDirectLoading(false);
+		}
+	};
+
+	const handleLocalStop = async () => {
+		setDirectActionLoading("local-stop");
+		try {
+			toast.message(t.settings.actionLocalStopping);
+			await invoke("local_gateway_daemon", { action: "stop" });
+			await disconnectGatewaySession();
+			setDirectMode("local");
+			closeDirectModalSuccess(t.settings.actionLocalStopped);
+		} catch (e) {
+			toast.error(String(e));
+		} finally {
+			setDirectActionLoading(null);
+		}
+	};
+
+	const handleLocalConnect = async () => {
+		setDirectActionLoading("local-connect");
+		try {
+			console.log(
+				"[Settings] handleLocalConnect: starting local_connect invoke...",
+			);
+			toast.message(t.localConnect.connecting);
+			const result = await invoke<{
+				gateway_url: string;
+				gateway_web_ui: string;
+				token: string;
+			}>("local_connect");
+			console.log(
+				"[Settings] handleLocalConnect: local_connect result:",
+				result,
+			);
+			const ok = await connectDirectGateway({
+				gatewayUrl: result.gateway_url,
+				gatewayWebUI: result.gateway_web_ui,
+				gatewayToken: result.token,
+				profileLabel: t.settings.directLocalGateway,
+			});
+			console.log(
+				"[Settings] handleLocalConnect: connectDirectGateway ok =",
+				ok,
+			);
+			if (!ok) return;
+			setDirectMode("local");
+			await invoke("save_app_config", {
+				config: { connectionMode: "local" },
+			});
+			setConnectionMode("local");
+			console.log(
+				"[Settings] handleLocalConnect: connectionMode set to 'local', directMode set to 'local', status =",
+				status,
+			);
+			closeDirectModalSuccess(t.localConnect.connected);
+		} catch (e) {
+			console.error("[Settings] handleLocalConnect error:", e);
+			toast.error(String(e));
+		} finally {
+			setDirectActionLoading(null);
+		}
+	};
+
+	const handleLocalRestart = async () => {
+		setDirectActionLoading("local-restart");
+		try {
+			toast.message(t.settings.actionLocalRestarting);
+			await invoke("local_gateway_daemon", { action: "restart" });
+			const result = await invoke<{
+				gateway_url: string;
+				gateway_web_ui: string;
+				token: string;
+			}>("local_connect");
+			const ok = await connectDirectGateway({
+				gatewayUrl: result.gateway_url,
+				gatewayWebUI: result.gateway_web_ui,
+				gatewayToken: result.token,
+				profileLabel: t.settings.directLocalGateway,
+			});
+			if (!ok) return;
+			setDirectMode("local");
+			await invoke("save_app_config", {
+				config: { connectionMode: "local" },
+			});
+			setConnectionMode("local");
+			closeDirectModalSuccess(t.settings.actionLocalRestarted);
+		} catch (e) {
+			toast.error(String(e));
+		} finally {
+			setDirectActionLoading(null);
+		}
+	};
+
+	const handleCloudDisconnect = async () => {
+		setDirectActionLoading("cloud-disconnect");
+		try {
+			toast.message(t.settings.actionCloudDisconnecting);
+			await disconnectGatewaySession();
+			closeDirectModalSuccess(t.settings.actionCloudDisconnected);
+		} catch (e) {
+			toast.error(String(e));
+		} finally {
+			setDirectActionLoading(null);
+		}
+	};
+
+	const handleCloudRestart = async () => {
+		setDirectActionLoading("cloud-restart");
+		try {
+			toast.message(t.settings.actionCloudRestarting);
+			const currentAddr = directAddress.trim() || directCloudAddress.trim();
+			if (!currentAddr) {
+				toast.error(t.settings.cloudGatewayAddrRequired);
+				return;
+			}
+			const normalized = normalizeGatewayEndpoint(currentAddr);
+			const token = directToken.trim() || runtimeConfig?.gatewayToken || "";
+			const ok = await connectDirectGateway({
+				gatewayUrl: normalized.gatewayUrl,
+				gatewayWebUI: normalized.gatewayWebUI,
+				gatewayToken: token,
+				profileLabel: t.settings.directCloudGateway,
+			});
+			if (!ok) return;
+			setDirectMode("cloud");
+			setDirectCloudAddress(currentAddr);
+			await invoke("save_app_config", {
+				config: { connectionMode: "local" },
+			});
+			setConnectionMode("local");
+			closeDirectModalSuccess(t.settings.actionCloudRestarted);
+		} catch (e) {
+			toast.error(String(e));
+		} finally {
+			setDirectActionLoading(null);
 		}
 	};
 
@@ -149,10 +366,11 @@ export function SettingsPage() {
 
 	const selectClass =
 		"text-sm px-2 py-1 rounded-lg border border-white/15 bg-surface-variant text-surface-on focus:outline-none";
-
+	const activeModeCardClass =
+		"border-primary bg-primary/5 dark:bg-primary/10 relative";
 	return (
 		<>
-			<TopBar title={t.sidebar.settings} subtitle={t.topbar.settingsSub} />
+			<TopBar title={t.sidebar.settings} />
 			<div className="flex-1 overflow-auto p-6 space-y-6 max-w-2xl">
 				{/* ── 连接方式 ── */}
 				<section>
@@ -160,19 +378,71 @@ export function SettingsPage() {
 
 					{/* 两个连接卡片 */}
 					<div className="grid grid-cols-2 gap-3">
+						{/* 本地 卡片 */}
+						<button
+							type="button"
+							onClick={handleDirectCardClick}
+							className={`group relative flex flex-col items-center justify-center text-left rounded-xl border p-3 transition-all duration-200 min-h-[80px] ${
+								connectionMode === "local" && isOnline
+									? activeModeCardClass
+									: "border-card-border bg-card-bg"
+							}`}
+						>
+							{connectionMode === "local" && isOnline && (
+								<span className="absolute top-3 right-3 flex h-2.5 w-2.5">
+									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+									<span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+								</span>
+							)}
+							{!(connectionMode === "local" && isOnline) && (
+								<span className="pointer-events-none absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-surface-variant/20 ring-1 ring-white/15" />
+							)}
+							<div className="flex items-center gap-1.5">
+								{" "}
+								<Cable
+									size={15}
+									className={
+										connectionMode === "local" && isOnline
+											? "text-primary"
+											: "text-surface-on-variant"
+									}
+								/>
+								<span className="text-sm font-medium text-surface-on">
+									{t.settings.local}
+								</span>
+							</div>
+							{connectionMode === "local" && isOnline && directMode && (
+								<p className="mt-1 text-[11px] text-primary font-medium">
+									{directMode === "local"
+										? t.settings.directLocalGateway
+										: t.settings.directCloudGateway}
+								</p>
+							)}
+						</button>
+
 						{/* License 卡片 */}
 						<button
 							type="button"
 							onClick={handleLicenseCardClick}
-							className="relative flex flex-col items-center justify-center text-left rounded-xl border border-card-border bg-card-bg p-3 hover:border-white/20 transition-all min-h-[80px]"
+							className={`group relative flex flex-col items-center justify-center text-left rounded-xl border p-3 transition-all duration-200 min-h-[80px] ${
+								connectionMode === "license" && isOnline
+									? activeModeCardClass
+									: "border-card-border bg-card-bg"
+							}`}
 						>
 							{connectionMode === "license" && isOnline && (
-								<span className="absolute top-2.5 left-2.5 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium leading-none">
-									{t.settings.current}
+								<span className="absolute top-3 right-3 flex h-2.5 w-2.5">
+									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+									<span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
 								</span>
 							)}
+							{!(connectionMode === "license" && isOnline) && (
+								<span className="pointer-events-none absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-surface-variant/20 ring-1 ring-white/15" />
+							)}
+
 							<div className="flex items-center gap-1.5">
-								<Cloud
+								{" "}
+								<Server
 									size={15}
 									className={
 										connectionMode === "license" && isOnline
@@ -207,58 +477,12 @@ export function SettingsPage() {
 								</div>
 							)}
 						</button>
-
-						{/* 本地 卡片 */}
-						<button
-							type="button"
-							onClick={handleDirectCardClick}
-							className="relative flex flex-col items-center justify-center text-left rounded-xl border border-card-border bg-card-bg p-3 hover:border-white/20 transition-all min-h-[80px]"
-						>
-							{connectionMode === "local" && isOnline && (
-								<span className="absolute top-2.5 left-2.5 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium leading-none">
-									{t.settings.current}
-								</span>
-							)}
-							<div className="flex items-center gap-1.5">
-								<Monitor
-									size={15}
-									className={
-										connectionMode === "local" && isOnline
-											? "text-primary"
-											: "text-surface-on-variant"
-									}
-								/>
-								<span className="text-sm font-medium text-surface-on">
-									{t.settings.local}
-								</span>
-							</div>
-						</button>
 					</div>
 				</section>
 
 				{/* ── 节点配置 ── */}
 				<section>
 					<SectionHeader title={t.settings.sectionNode} />
-
-					{/* 飞书 */}
-					<Card className="mb-3">
-						<div className="flex items-center gap-2 mb-3">
-							<MessageSquare size={15} className="text-primary" />
-							<span className="text-sm font-medium text-surface-on">
-								{t.settings.feishuConfig}
-							</span>
-						</div>
-						<p className="text-xs text-surface-on-variant mb-3">
-							{t.settings.feishuConfigDesc}
-						</p>
-						<Button
-							variant="outlined"
-							onClick={() => setFeishuWizardOpen(true)}
-							disabled={!isOnline}
-						>
-							{t.settings.configureFeishu}
-						</Button>
-					</Card>
 
 					{/* 模型 API */}
 					<div className="relative mb-3">
@@ -276,15 +500,50 @@ export function SettingsPage() {
 								{t.settings.openWizard}
 							</Button>
 						</Card>
-						{!isOnline && (
-							<div className="absolute inset-0 bg-surface/90 backdrop-blur-sm rounded-xl flex items-center justify-center">
-								<p className="text-sm text-surface-on-variant font-extrabold">
-									{t.settings.activateFirst}
-								</p>
-							</div>
-						)}
 					</div>
 
+					<Card className="mb-3">
+						<div className="flex items-center gap-2 mb-2">
+							<Cpu size={15} className="text-primary" />
+							<span className="text-sm font-medium text-surface-on">
+								{t.settings.capabilitiesTitle}
+							</span>
+						</div>
+						<p className="text-xs text-surface-on-variant mb-3">
+							{t.settings.capabilitiesDesc}
+						</p>
+						<div className="space-y-3">
+							{capabilityItems.map(
+								({ key, icon: Icon, title, description }) => (
+									<div
+										key={key}
+										className="rounded-lg border border-white/10 p-3"
+									>
+										<div className="flex items-start justify-between gap-3">
+											<div className="flex items-start gap-2.5">
+												<Icon
+													size={15}
+													className="text-primary mt-0.5 shrink-0"
+												/>
+												<div>
+													<p className="text-sm text-surface-on font-medium">
+														{title}
+													</p>
+													<p className="text-xs text-surface-on-variant mt-0.5">
+														{description}
+													</p>
+												</div>
+											</div>
+											<Switch
+												checked={capabilities[key]}
+												onChange={() => toggleCapability(key)}
+											/>
+										</div>
+									</div>
+								),
+							)}
+						</div>
+					</Card>
 					{/* 审批规则 */}
 					<Card>
 						<div className="flex items-center gap-2 mb-3">
@@ -356,7 +615,7 @@ export function SettingsPage() {
 												: "border-white/15 text-surface-on-variant hover:text-surface-on"
 										}`}
 									>
-										{loc === "zh" ? "中文" : "English"}
+										{loc === "zh" ? t.settings.localeZh : t.settings.localeEn}
 									</button>
 								))}
 							</div>
@@ -446,7 +705,7 @@ export function SettingsPage() {
 								type="text"
 								value={newKey}
 								onChange={(e) => setNewKey(e.target.value)}
-								placeholder="XXXX-XXXX-XXXX-XXXX"
+								placeholder={t.settings.licenseKeyPlaceholder}
 								className={inputClass}
 								autoComplete="off"
 								spellCheck={false}
@@ -485,10 +744,10 @@ export function SettingsPage() {
 			{/* ── 直连弹窗 ── */}
 			{directModalOpen && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-					<div className="w-[420px] bg-card-bg border border-card-border rounded-xl p-5 shadow-2xl ring-1 ring-white/10 space-y-4">
+					<div className="w-[460px] bg-card-bg border border-card-border rounded-xl p-5 shadow-2xl ring-1 ring-white/10 space-y-4">
 						<div className="flex items-center justify-between mb-4">
 							<div className="flex items-center gap-2">
-								<Monitor size={15} className="text-primary" />
+								<Cable size={15} className="text-primary" />
 								<h3 className="text-sm font-semibold text-surface-on">
 									{t.settings.directModalTitle}
 								</h3>
@@ -508,58 +767,170 @@ export function SettingsPage() {
 									{t.settings.directSelectHint}
 								</p>
 								<div className="grid grid-cols-2 gap-3">
-									<button
-										type="button"
-										onClick={() => setDirectTarget("local")}
-										className="rounded-xl border border-card-border bg-surface p-4 text-left hover:border-white/20 transition-colors"
+									<div
+										className={`rounded-xl border bg-surface transition-colors flex flex-col ${
+											isLocalConnected
+												? activeModeCardClass
+												: "border-card-border"
+										}`}
 									>
-										<div className="flex items-center gap-2 mb-1.5">
-											<Monitor size={14} className="text-primary" />
-											<span className="text-sm font-medium text-surface-on">
-												{t.settings.directLocalGateway}
-											</span>
-										</div>
-										<p className="text-xs text-surface-on-variant">
-											{t.settings.directLocalDesc}
-										</p>
-									</button>
-									<button
-										type="button"
-										onClick={() => setDirectTarget("cloud")}
-										className="rounded-xl border border-card-border bg-surface p-4 text-left hover:border-white/20 transition-colors"
-									>
-										<div className="flex items-center gap-2 mb-1.5">
-											<Cloud size={14} className="text-primary" />
-											<span className="text-sm font-medium text-surface-on">
-												{t.settings.directCloudGateway}
-											</span>
-										</div>
-										<p className="text-xs text-surface-on-variant">
-											{t.settings.directCloudDesc}
-										</p>
-									</button>
-								</div>
-							</div>
-						)}
+										<button
+											type="button"
+											onClick={() => {
+												if (!isLocalConnected) {
+													handleLocalConnect();
+												}
+											}}
+											disabled={directBusy}
+											className={`w-full p-4 text-center hover:bg-surface-variant/30 rounded-xl ${
+												isLocalConnected
+													? ""
+													: "flex-1 flex flex-col justify-center"
+											}`}
+										>
+											<div className="flex items-center justify-center gap-2 mb-1.5">
+												<div className="flex items-center gap-2">
+													<HardDrive size={14} className="text-primary" />
+													<span className="text-sm font-medium text-surface-on">
+														{t.settings.directLocalGateway}
+													</span>
+													{isLocalConnected && (
+														<span className="relative flex h-2.5 w-2.5">
+															<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+															<span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+														</span>
+													)}
+												</div>
+											</div>
+											<p className="text-xs text-surface-on-variant text-center">
+												{t.settings.directLocalDesc}
+											</p>
+											{directActionLoading === "local-connect" && (
+												<div className="mt-2 flex items-center justify-center text-xs text-surface-on-variant gap-1.5">
+													<Loader2 size={12} className="animate-spin" />
+													<span>{t.localConnect.connecting}</span>
+												</div>
+											)}
+										</button>
+										{isLocalConnected && (
+											<div className="px-4 pb-4 pt-1 space-y-2">
+												<div className="flex gap-2">
+													<Button
+														size="sm"
+														variant="outlined"
+														className="flex-1"
+														onClick={handleLocalStop}
+														disabled={directBusy}
+													>
+														{directActionLoading === "local-stop" ? (
+															<Loader2 size={12} className="animate-spin" />
+														) : (
+															<Power size={12} />
+														)}
+														<span className="ml-1">{t.settings.localStop}</span>
+													</Button>
+													<Button
+														size="sm"
+														variant="outlined"
+														className="flex-1"
+														onClick={handleLocalRestart}
+														disabled={directBusy}
+													>
+														{directActionLoading === "local-restart" ? (
+															<Loader2 size={12} className="animate-spin" />
+														) : (
+															<RotateCw size={12} />
+														)}
+														<span className="ml-1">
+															{t.settings.localRestart}
+														</span>
+													</Button>
+												</div>
+											</div>
+										)}
+									</div>
 
-						{directTarget === "local" && (
-							<div className="space-y-3">
-								<button
-									type="button"
-									onClick={() => setDirectTarget(null)}
-									className="text-xs text-surface-on-variant hover:text-surface-on transition-colors"
-								>
-									{t.settings.backToSelect}
-								</button>
-								<LocalConnectPanel
-									onConnected={async () => {
-										await invoke("save_app_config", {
-											config: { connectionMode: "local" },
-										});
-										setConnectionMode("local");
-										setDirectModalOpen(false);
-									}}
-								/>
+									<div
+										className={`rounded-xl border bg-surface transition-colors flex flex-col ${
+											isCloudConnected
+												? activeModeCardClass
+												: "border-card-border"
+										}`}
+									>
+										<button
+											type="button"
+											onClick={() => {
+												setDirectTarget("cloud");
+											}}
+											className={`w-full p-4 text-center hover:bg-surface-variant/30 rounded-xl ${
+												isCloudConnected
+													? ""
+													: "flex-1 flex flex-col justify-center"
+											}`}
+										>
+											<div className="flex items-center justify-center gap-2 mb-1.5">
+												<div className="flex items-center gap-2">
+													<Globe size={14} className="text-primary" />
+													<span className="text-sm font-medium text-surface-on">
+														{t.settings.directCloudGateway}
+													</span>
+													{isCloudConnected && (
+														<span className="relative flex h-2.5 w-2.5">
+															<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+															<span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+														</span>
+													)}
+												</div>
+											</div>
+											<p className="text-xs text-surface-on-variant text-center">
+												{t.settings.directCloudDesc}
+											</p>
+										</button>
+										{isCloudConnected && (
+											<div className="px-4 pb-4 pt-1 space-y-2">
+												{directCloudAddress && (
+													<p className="text-[11px] font-mono text-surface-on-variant truncate">
+														{directCloudAddress}
+													</p>
+												)}
+												<div className="flex gap-2">
+													<Button
+														size="sm"
+														variant="outlined"
+														className="flex-1"
+														onClick={handleCloudDisconnect}
+														disabled={directBusy}
+													>
+														{directActionLoading === "cloud-disconnect" ? (
+															<Loader2 size={12} className="animate-spin" />
+														) : (
+															<Unplug size={12} />
+														)}
+														<span className="ml-1">
+															{t.settings.cloudDisconnect}
+														</span>
+													</Button>
+													<Button
+														size="sm"
+														variant="outlined"
+														className="flex-1"
+														onClick={handleCloudRestart}
+														disabled={directBusy}
+													>
+														{directActionLoading === "cloud-restart" ? (
+															<Loader2 size={12} className="animate-spin" />
+														) : (
+															<RotateCw size={12} />
+														)}
+														<span className="ml-1">
+															{t.settings.cloudRestart}
+														</span>
+													</Button>
+												</div>
+											</div>
+										)}
+									</div>
+								</div>
 							</div>
 						)}
 
@@ -568,8 +939,9 @@ export function SettingsPage() {
 								<button
 									type="button"
 									onClick={() => setDirectTarget(null)}
-									className="text-xs text-surface-on-variant hover:text-surface-on transition-colors"
+									className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-surface-on-variant hover:text-surface-on border border-white/10 hover:border-white/20 rounded-lg transition-all bg-surface-variant/30 hover:bg-surface-variant/60"
 								>
+									<ArrowLeft size={12} />
 									{t.settings.backToSelect}
 								</button>
 								<div>
@@ -580,8 +952,12 @@ export function SettingsPage() {
 										type="text"
 										value={directAddress}
 										onChange={(e) => setDirectAddress(e.target.value)}
-										placeholder="wss://gateway.example.com:18789"
-										className={inputClass}
+										placeholder={t.settings.cloudGatewayAddrPlaceholder}
+										className={`${inputClass} ${
+											isCloudConnected
+												? "border-green-500/50 ring-1 ring-green-500/40"
+												: ""
+										}`}
 									/>
 								</div>
 								<div>
@@ -598,7 +974,7 @@ export function SettingsPage() {
 								</div>
 								<Button
 									onClick={doConnectDirectCloud}
-									disabled={directLoading || !directAddress.trim()}
+									disabled={directBusy || !directAddress.trim()}
 									className="w-full"
 								>
 									{directLoading ? (
@@ -656,12 +1032,6 @@ export function SettingsPage() {
 			)}
 
 			{/* ── 模型 API 向导 ── */}
-			{feishuWizardOpen && (
-				<FeishuWizard
-					onSuccess={() => setFeishuWizardOpen(false)}
-					onClose={() => setFeishuWizardOpen(false)}
-				/>
-			)}
 			{apiWizardOpen && (
 				<ApiWizard
 					onSuccess={() => {

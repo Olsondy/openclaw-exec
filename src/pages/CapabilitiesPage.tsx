@@ -31,10 +31,7 @@ export function CapabilitiesPage() {
 
 	return (
 		<>
-			<TopBar
-				title={t.sidebar.capabilities}
-				subtitle={t.topbar.capabilitiesSub}
-			/>
+			<TopBar title={t.sidebar.capabilities} />
 			<div className="flex-1 overflow-auto p-6 space-y-3 max-w-2xl">
 				{modules.map(({ key, icon: Icon, title, description }) => (
 					<Card key={key}>

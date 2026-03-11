@@ -4,8 +4,8 @@ export const en: Dict = {
 	// Sidebar
 	sidebar: {
 		dashboard: "Dashboard",
-		activity: "Activity",
-		channel: "Channel",
+		activity: "Activity Logs",
+		channel: "Message Channels",
 		capabilities: "Capabilities",
 		settings: "Settings",
 		devConsole: "Dev Console",
@@ -30,8 +30,10 @@ export const en: Dict = {
 	// Dashboard
 	dashboard: {
 		status: "Status",
-		totalTasks: "Total Tasks",
+		totalTasks: "Total Events",
 		successTasks: "Successes",
+		openclawVersion: "OpenClaw Version",
+		configuredModels: "Configured Models",
 		efficiency: "Efficiency",
 		avgDuration: "Avg response time",
 		successRate: "Success rate",
@@ -67,10 +69,16 @@ export const en: Dict = {
 
 	// Activity
 	activity: {
+		auditLogs: "Audit Logs",
+		gatewayLogs: "Gateway Logs",
 		all: "All Activity",
 		errors: "Errors",
 		successes: "Successes",
 		warnings: "Warnings",
+		levelLabel: "Level",
+		keywordLabel: "Keyword",
+		keywordPlaceholder: "Filter by title, description, or tag",
+		clearFilters: "Clear Filters",
 		noLogs: "No activity logs yet",
 	},
 
@@ -109,7 +117,7 @@ export const en: Dict = {
 		licenseHint: "Recommended for SaaS tenant setup",
 		localTitle: "Direct Gateway",
 		localDesc:
-			"Connect directly to a gateway (auto-detect local install or input cloud gateway address).",
+			"Connect directly to a gateway (auto-detect local install or enter a gateway address).",
 		localHint: "Recommended for private/self-hosted deployments",
 		initializing: "Initializing...",
 		continue: "Continue",
@@ -118,18 +126,24 @@ export const en: Dict = {
 
 	// Local Connect
 	localConnect: {
-		idle: "Connect Local OpenClaw",
+		idle: "Local Connect",
 		scanning: "Scanning for services...",
 		pairing: "Preparing connection metadata...",
 		restarting: "Waiting for service ready...",
 		connecting: "Connecting...",
 		done: "Connected",
 		error: "Retry",
-		desc: "Auto-discover and connect to a locally installed OpenClaw gateway (read-only detection, no local config writes).",
+		desc: "Auto-discover and connect to a locally installed OpenClaw.",
 		connected: "Connected to local OpenClaw",
 		errorMsg:
 			"Connection failed. Check the logs below, or restart the openclaw service manually and retry.",
 		connectedBtn: "Connected",
+		logRestartHeader: "--- Restart logs ---",
+		logRestartFooter: "--- End ---",
+		logFoundService: "Service found: {url}",
+		logAuthConnecting: "Device authorized. Connecting...",
+		logConnectedSuccess: "Connected successfully",
+		logErrorPrefix: "Error: {error}",
 	},
 
 	// Settings
@@ -161,8 +175,6 @@ export const en: Dict = {
 		apiConfigDesc:
 			"Override the node model settings locally. Changes will not be written back to the tenant database.",
 		openWizard: "Open Config Wizard",
-		activateFirst:
-			"The current gateway is not connected and cannot be configured.",
 		approvalRules: "Approval Rules",
 		always: "Always Ask",
 		sensitiveOnly: "Sensitive Only",
@@ -178,6 +190,8 @@ export const en: Dict = {
 		// Appearance
 		appearance: "Appearance",
 		language: "Language",
+		localeZh: "Chinese",
+		localeEn: "English",
 		themeColor: "Theme",
 		themeLight: "Light",
 		themeDark: "Dark",
@@ -188,6 +202,8 @@ export const en: Dict = {
 		approvalBrowser: "Browser Automation",
 		approvalSystem: "System Operations",
 		approvalVision: "Vision / OCR",
+		capabilitiesTitle: "Node Capabilities",
+		capabilitiesDesc: "Control which agent capabilities are available.",
 		// Sections
 		sectionConnection: "Connection",
 		sectionNode: "Agent",
@@ -202,18 +218,58 @@ export const en: Dict = {
 		currentKeyLabel: "Current Key",
 		expiryTimeLabel: "Expiry",
 		changeAndActivate: "Change & Connect",
+		licenseKeyPlaceholder: "XXXX-XXXX-XXXX-XXXX",
 		localModalTitle: "Local OpenClaw",
-		directModalTitle: "Direct Gateway",
-		directSelectHint: "Choose a direct connection target.",
-		directLocalGateway: "Local Gateway",
+		directModalTitle: "Direct",
+		directSelectHint: "Choose a direct connection mode.",
+		directLocalGateway: "Local",
 		directLocalDesc: "Auto-detect and connect to local installed gateway",
-		directCloudGateway: "Cloud Gateway",
-		directCloudDesc: "Input cloud gateway address and connect directly",
+		directCloudGateway: "Address",
+		directCloudDesc:
+			"Enter a gateway address to connect directly (local/LAN/cloud).",
 		backToSelect: "Back",
-		cloudGatewayAddr: "Cloud Gateway Address",
+		cloudGatewayAddr: "Gateway Address",
+		cloudGatewayAddrPlaceholder:
+			"ws://127.0.0.1:18789 or wss://gateway.example.com:18789",
 		cloudGatewayToken: "Gateway Token (Optional)",
 		cloudGatewayTokenPlaceholder: "Leave empty for proxy/no-auth mode",
 		connectNow: "Connect Now",
+		localStop: "Stop",
+		localRestart: "Restart",
+		cloudDisconnect: "Disconnect",
+		cloudRestart: "Restart",
+		cloudGatewayAddrRequired: "Please enter a gateway address",
+		actionLocalStopping: "Stopping local gateway...",
+		actionLocalStopped: "Local gateway stopped",
+		actionLocalRestarting: "Restarting local gateway...",
+		actionLocalRestarted: "Local gateway restarted and connected",
+		actionCloudConnecting: "Connecting to gateway address...",
+		actionCloudConnected: "Gateway connected",
+		actionCloudDisconnecting: "Disconnecting gateway...",
+		actionCloudDisconnected: "Gateway disconnected",
+		actionCloudRestarting: "Reconnecting gateway...",
+		actionCloudRestarted: "Gateway reconnected",
+		licenseKeyRequired: "Please configure License Key in Settings first",
+		licenseKeyInvalid:
+			"License Key is invalid or expired. Please verify and retry.",
+		authStatusException:
+			"Authorization status abnormal: {status}, expiry: {expiry}",
+		reconnectMissing:
+			"No reconnectable gateway config found. Please complete direct connection first.",
+		directModeLabel: "Direct Mode",
+		switchModeTitle: "Switch Connection Mode",
+		switchModeDescLicenseToLocal:
+			"After switching to local mode, the current cloud connection will be disconnected. Cloud model API config and rules cannot be migrated automatically, so export a config snapshot first.",
+		switchModeDescLocalToLicense:
+			"After switching to tenant mode, the current local connection will be disconnected. Local pairing info is saved, so you can switch back without re-pairing.",
+		switchModeExportSummary:
+			"Export includes: License key, expiry date, approval rules, and model config snapshot (API keys excluded).",
+		switchModeExporting: "Exporting...",
+		switchModeExportAction: "Export Config Snapshot",
+		switchModeResetItemToken: "Current connection token / gateway",
+		switchModeResetItemSession: "License key (or local pairing session)",
+		switchModeResetItemApproval: "Approval rules will be reset to defaults",
+		switchModeConfirm: "Confirm Switch",
 		modeCloud: "Tenant Connection",
 		modeLocal: "Direct Gateway",
 	},
