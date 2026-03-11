@@ -1,1 +1,5 @@
-pnpm exec biome check --write
+npx @biomejs/biome check --write --staged --no-errors-on-unmatched
+git add -u
+
+# TypeScript 类型检查
+npx tsc --noEmit

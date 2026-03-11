@@ -81,11 +81,6 @@ export function SettingsPage() {
 		{ key: "system", label: t.settings.themeSystem, icon: Monitor },
 	];
 
-	const MODE_LABEL: Record<ConnectionMode, string> = {
-		license: t.settings.modeCloud,
-		local: t.settings.modeLocal,
-	};
-
 	const doActivate = async () => {
 		setShowConfirmKey(false);
 		setLicenseKey(newKey.trim());
