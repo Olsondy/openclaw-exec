@@ -5,6 +5,7 @@ mod auth_client;
 mod config;
 mod device_identity;
 mod local_connect;
+mod operator_client;
 mod profile_store;
 mod sidecar;
 mod tray;
@@ -113,6 +114,9 @@ fn main() {
             auth_client::check_auth,
             ws_client::connect_gateway,
             ws_client::disconnect_gateway,
+            operator_client::op_connect,
+            operator_client::op_call,
+            operator_client::op_disconnect,
             get_device_identity,
             open_cloud_console,
             install_update,

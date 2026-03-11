@@ -17,24 +17,42 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { LocalConnectPanel } from "../components/features/settings/LocalConnectPanel";
-import { SwitchModeDialog } from "../components/features/settings/SwitchModeDialog";
 import { ApiWizard } from "../components/features/wizard/ApiWizard";
+import { FeishuWizard } from "../components/features/wizard/FeishuWizard";
 import { TopBar } from "../components/layout/TopBar";
 import { Button, Card } from "../components/ui";
 import { useNodeConnection } from "../hooks/useNodeConnection";
 import type { Locale, Theme } from "../i18n";
 import { useI18nStore, useT } from "../i18n";
-import {
-	useBootstrapStore,
-	useConfigStore,
-	useConnectionStore,
-} from "../store";
-import type { ConnectionMode } from "../store/config.store";
+import { useConfigStore, useConnectionStore } from "../store";
 
 function maskLicenseKey(key: string): string {
 	const parts = key.split("-");
 	if (parts.length === 4) return `${parts[0]}-****-****-${parts[3]}`;
 	return `${key.slice(0, 4)}****`;
+}
+
+function normalizeGatewayEndpoint(raw: string): {
+	gatewayUrl: string;
+	gatewayWebUI: string;
+} {
+	const value = raw.trim().replace(/\/+$/, "");
+	if (/^wss?:\/\//i.test(value)) {
+		return {
+			gatewayUrl: value,
+			gatewayWebUI: value.replace(/^ws/i, "http"),
+		};
+	}
+	if (/^https?:\/\//i.test(value)) {
+		return {
+			gatewayUrl: value.replace(/^http/i, "ws"),
+			gatewayWebUI: value,
+		};
+	}
+	return {
+		gatewayUrl: `wss://${value}`,
+		gatewayWebUI: `https://${value}`,
+	};
 }
 
 function SectionHeader({ title }: { title: string }) {
@@ -54,22 +72,26 @@ export function SettingsPage() {
 		setLicenseKey,
 		approvalRules,
 		setApprovalRule,
-		licenseId,
 		connectionMode,
 		setConnectionMode,
 	} = useConfigStore();
 	const { status, errorMessage } = useConnectionStore();
-	const { verifyAndConnect } = useNodeConnection();
-	const { openWizard } = useBootstrapStore();
+	const { verifyAndConnect, connectDirectGateway } = useNodeConnection();
 	const t = useT();
 	const { locale, theme, setLocale, setTheme } = useI18nStore();
 
 	const [newKey, setNewKey] = useState("");
 	const [showConfirmKey, setShowConfirmKey] = useState(false);
 	const [licenseModalOpen, setLicenseModalOpen] = useState(false);
-	const [localModalOpen, setLocalModalOpen] = useState(false);
+	const [directModalOpen, setDirectModalOpen] = useState(false);
+	const [directTarget, setDirectTarget] = useState<"local" | "cloud" | null>(
+		null,
+	);
+	const [directAddress, setDirectAddress] = useState("");
+	const [directToken, setDirectToken] = useState("");
+	const [directLoading, setDirectLoading] = useState(false);
+	const [feishuWizardOpen, setFeishuWizardOpen] = useState(false);
 	const [apiWizardOpen, setApiWizardOpen] = useState(false);
-	const [switchTarget, setSwitchTarget] = useState<ConnectionMode | null>(null);
 
 	const isLoading = status === "auth_checking" || status === "connecting";
 	const isOnline = status === "online";
@@ -84,33 +106,41 @@ export function SettingsPage() {
 	const doActivate = async () => {
 		setShowConfirmKey(false);
 		setLicenseKey(newKey.trim());
-		if (!connectionMode) {
-			await invoke("save_app_config", {
-				config: { connectionMode: "license" },
-			});
-			setConnectionMode("license");
-		}
+		await invoke("save_app_config", {
+			config: { connectionMode: "license" },
+		});
+		setConnectionMode("license");
 		await verifyAndConnect();
 	};
 
-	const handleSwitchConfirm = (toMode: ConnectionMode) => {
-		setConnectionMode(toMode);
-		setSwitchTarget(null);
-	};
-
 	const handleLicenseCardClick = () => {
-		if (connectionMode === "local") {
-			setSwitchTarget("license");
-		} else {
-			setLicenseModalOpen(true);
-		}
+		setLicenseModalOpen(true);
 	};
 
-	const handleLocalCardClick = () => {
-		if (connectionMode === "license") {
-			setSwitchTarget("local");
-		} else {
-			setLocalModalOpen(true);
+	const handleDirectCardClick = () => {
+		setDirectTarget(null);
+		setDirectModalOpen(true);
+	};
+
+	const doConnectDirectCloud = async () => {
+		if (!directAddress.trim()) return;
+		setDirectLoading(true);
+		try {
+			const normalized = normalizeGatewayEndpoint(directAddress);
+			const ok = await connectDirectGateway({
+				gatewayUrl: normalized.gatewayUrl,
+				gatewayWebUI: normalized.gatewayWebUI,
+				gatewayToken: directToken.trim(),
+				profileLabel: "Direct Cloud",
+			});
+			if (!ok) return;
+			await invoke("save_app_config", {
+				config: { connectionMode: "local" },
+			});
+			setConnectionMode("local");
+			setDirectModalOpen(false);
+		} finally {
+			setDirectLoading(false);
 		}
 	};
 
@@ -181,7 +211,7 @@ export function SettingsPage() {
 						{/* 本地 卡片 */}
 						<button
 							type="button"
-							onClick={handleLocalCardClick}
+							onClick={handleDirectCardClick}
 							className="relative flex flex-col items-center justify-center text-left rounded-xl border border-card-border bg-card-bg p-3 hover:border-white/20 transition-all min-h-[80px]"
 						>
 							{connectionMode === "local" && isOnline && (
@@ -211,22 +241,24 @@ export function SettingsPage() {
 					<SectionHeader title={t.settings.sectionNode} />
 
 					{/* 飞书 */}
-					{isOnline && licenseId && (
-						<Card className="mb-3">
-							<div className="flex items-center gap-2 mb-3">
-								<MessageSquare size={15} className="text-primary" />
-								<span className="text-sm font-medium text-surface-on">
-									{t.settings.feishuConfig}
-								</span>
-							</div>
-							<p className="text-xs text-surface-on-variant mb-3">
-								{t.settings.feishuConfigDesc}
-							</p>
-							<Button variant="outlined" onClick={openWizard}>
-								{t.settings.configureFeishu}
-							</Button>
-						</Card>
-					)}
+					<Card className="mb-3">
+						<div className="flex items-center gap-2 mb-3">
+							<MessageSquare size={15} className="text-primary" />
+							<span className="text-sm font-medium text-surface-on">
+								{t.settings.feishuConfig}
+							</span>
+						</div>
+						<p className="text-xs text-surface-on-variant mb-3">
+							{t.settings.feishuConfigDesc}
+						</p>
+						<Button
+							variant="outlined"
+							onClick={() => setFeishuWizardOpen(true)}
+							disabled={!isOnline}
+						>
+							{t.settings.configureFeishu}
+						</Button>
+					</Card>
 
 					{/* 模型 API */}
 					<div className="relative mb-3">
@@ -244,7 +276,7 @@ export function SettingsPage() {
 								{t.settings.openWizard}
 							</Button>
 						</Card>
-						{!licenseId && (
+						{!isOnline && (
 							<div className="absolute inset-0 bg-surface/90 backdrop-blur-sm rounded-xl flex items-center justify-center">
 								<p className="text-sm text-surface-on-variant font-extrabold">
 									{t.settings.activateFirst}
@@ -450,36 +482,136 @@ export function SettingsPage() {
 				</div>
 			)}
 
-			{/* ── 本地连接弹窗 ── */}
-			{localModalOpen && (
+			{/* ── 直连弹窗 ── */}
+			{directModalOpen && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-					<div className="w-96 bg-card-bg border border-card-border rounded-xl p-5 shadow-2xl ring-1 ring-white/10">
+					<div className="w-[420px] bg-card-bg border border-card-border rounded-xl p-5 shadow-2xl ring-1 ring-white/10 space-y-4">
 						<div className="flex items-center justify-between mb-4">
 							<div className="flex items-center gap-2">
 								<Monitor size={15} className="text-primary" />
 								<h3 className="text-sm font-semibold text-surface-on">
-									{t.settings.localModalTitle}
+									{t.settings.directModalTitle}
 								</h3>
 							</div>
 							<button
 								type="button"
-								onClick={() => setLocalModalOpen(false)}
+								onClick={() => setDirectModalOpen(false)}
 								className="text-surface-on-variant hover:text-surface-on transition-colors"
 							>
 								<X size={15} />
 							</button>
 						</div>
-						<LocalConnectPanel
-							onConnected={async () => {
-								if (!connectionMode) {
-									await invoke("save_app_config", {
-										config: { connectionMode: "local" },
-									});
-									setConnectionMode("local");
-								}
-								setLocalModalOpen(false);
-							}}
-						/>
+
+						{directTarget === null && (
+							<div className="space-y-3">
+								<p className="text-xs text-surface-on-variant">
+									{t.settings.directSelectHint}
+								</p>
+								<div className="grid grid-cols-2 gap-3">
+									<button
+										type="button"
+										onClick={() => setDirectTarget("local")}
+										className="rounded-xl border border-card-border bg-surface p-4 text-left hover:border-white/20 transition-colors"
+									>
+										<div className="flex items-center gap-2 mb-1.5">
+											<Monitor size={14} className="text-primary" />
+											<span className="text-sm font-medium text-surface-on">
+												{t.settings.directLocalGateway}
+											</span>
+										</div>
+										<p className="text-xs text-surface-on-variant">
+											{t.settings.directLocalDesc}
+										</p>
+									</button>
+									<button
+										type="button"
+										onClick={() => setDirectTarget("cloud")}
+										className="rounded-xl border border-card-border bg-surface p-4 text-left hover:border-white/20 transition-colors"
+									>
+										<div className="flex items-center gap-2 mb-1.5">
+											<Cloud size={14} className="text-primary" />
+											<span className="text-sm font-medium text-surface-on">
+												{t.settings.directCloudGateway}
+											</span>
+										</div>
+										<p className="text-xs text-surface-on-variant">
+											{t.settings.directCloudDesc}
+										</p>
+									</button>
+								</div>
+							</div>
+						)}
+
+						{directTarget === "local" && (
+							<div className="space-y-3">
+								<button
+									type="button"
+									onClick={() => setDirectTarget(null)}
+									className="text-xs text-surface-on-variant hover:text-surface-on transition-colors"
+								>
+									{t.settings.backToSelect}
+								</button>
+								<LocalConnectPanel
+									onConnected={async () => {
+										await invoke("save_app_config", {
+											config: { connectionMode: "local" },
+										});
+										setConnectionMode("local");
+										setDirectModalOpen(false);
+									}}
+								/>
+							</div>
+						)}
+
+						{directTarget === "cloud" && (
+							<div className="space-y-3">
+								<button
+									type="button"
+									onClick={() => setDirectTarget(null)}
+									className="text-xs text-surface-on-variant hover:text-surface-on transition-colors"
+								>
+									{t.settings.backToSelect}
+								</button>
+								<div>
+									<label className="text-xs text-surface-on-variant mb-1.5 block">
+										{t.settings.cloudGatewayAddr}
+									</label>
+									<input
+										type="text"
+										value={directAddress}
+										onChange={(e) => setDirectAddress(e.target.value)}
+										placeholder="wss://gateway.example.com:18789"
+										className={inputClass}
+									/>
+								</div>
+								<div>
+									<label className="text-xs text-surface-on-variant mb-1.5 block">
+										{t.settings.cloudGatewayToken}
+									</label>
+									<input
+										type="password"
+										value={directToken}
+										onChange={(e) => setDirectToken(e.target.value)}
+										placeholder={t.settings.cloudGatewayTokenPlaceholder}
+										className={inputClass}
+									/>
+								</div>
+								<Button
+									onClick={doConnectDirectCloud}
+									disabled={directLoading || !directAddress.trim()}
+									className="w-full"
+								>
+									{directLoading ? (
+										<span className="flex items-center gap-2">
+											<Loader2 size={13} className="animate-spin" />
+											{t.settings.connecting}
+										</span>
+									) : (
+										t.settings.connectNow
+									)}
+								</Button>
+							</div>
+						)}
 					</div>
 				</div>
 			)}
@@ -523,23 +655,17 @@ export function SettingsPage() {
 				</div>
 			)}
 
-			{/* ── 切换模式确认弹窗 ── */}
-			{switchTarget && connectionMode && (
-				<SwitchModeDialog
-					fromMode={connectionMode}
-					toMode={switchTarget}
-					onConfirm={() => handleSwitchConfirm(switchTarget)}
-					onCancel={() => setSwitchTarget(null)}
+			{/* ── 模型 API 向导 ── */}
+			{feishuWizardOpen && (
+				<FeishuWizard
+					onSuccess={() => setFeishuWizardOpen(false)}
+					onClose={() => setFeishuWizardOpen(false)}
 				/>
 			)}
-
-			{/* ── 模型 API 向导 ── */}
-			{apiWizardOpen && licenseId && (
+			{apiWizardOpen && (
 				<ApiWizard
-					licenseId={licenseId}
 					onSuccess={() => {
 						setApiWizardOpen(false);
-						verifyAndConnect();
 					}}
 					onClose={() => setApiWizardOpen(false)}
 				/>

@@ -11,6 +11,12 @@ interface LocalConnectResult {
 	restart_log: string | null;
 }
 
+interface DeviceIdentity {
+	device_id: string;
+	public_key_raw: string;
+	private_key_raw?: string;
+}
+
 export type LocalConnectPhase =
 	| "idle"
 	| "scanning"
@@ -39,9 +45,10 @@ export function useLocalConnection() {
 
 		try {
 			setPhase("pairing");
-			appendLog("正在配对设备...");
+			appendLog("正在准备本地连接参数...");
 
 			const result = await invoke<LocalConnectResult>("local_connect");
+			const identity = await invoke<DeviceIdentity>("get_device_identity");
 
 			if (result.restart_log) {
 				appendLog("--- 重启日志 ---");
@@ -64,8 +71,8 @@ export function useLocalConnection() {
 			});
 
 			setUserProfile({
-				licenseStatus: "Local",
-				expiryDate: "Local Mode",
+				licenseStatus: "Direct",
+				expiryDate: "Direct Mode",
 			});
 
 			await invoke("connect_gateway", {
@@ -73,6 +80,8 @@ export function useLocalConnection() {
 				token: result.token,
 				agentId: result.agent_id,
 				deviceName: result.device_name,
+				publicKeyRaw: identity.public_key_raw,
+				privateKeyRaw: identity.private_key_raw ?? null,
 			});
 
 			setPhase("done");

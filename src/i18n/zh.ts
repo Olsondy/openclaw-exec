@@ -9,10 +9,10 @@ export type Dict = {
 		devConsole: string;
 		expand: string;
 		collapse: string;
-		gatewayLabel: string;
 		gatewayConnecting: string;
 		gatewayConnected: string;
 		gatewayDisconnected: string;
+		gatewayLabel: string;
 		reconnect: string;
 	};
 	topbar: {
@@ -171,6 +171,17 @@ export type Dict = {
 		expiryTimeLabel: string;
 		changeAndActivate: string;
 		localModalTitle: string;
+		directModalTitle: string;
+		directSelectHint: string;
+		directLocalGateway: string;
+		directLocalDesc: string;
+		directCloudGateway: string;
+		directCloudDesc: string;
+		backToSelect: string;
+		cloudGatewayAddr: string;
+		cloudGatewayToken: string;
+		cloudGatewayTokenPlaceholder: string;
+		connectNow: string;
 		modeCloud: string;
 		modeLocal: string;
 	};
@@ -187,10 +198,10 @@ export const zh: Dict = {
 		devConsole: "开发者控制台",
 		expand: "展开菜单",
 		collapse: "收起菜单",
-		gatewayLabel: "网关 ：",
 		gatewayConnecting: "连接中...",
 		gatewayConnected: "已连接",
 		gatewayDisconnected: "未连接",
+		gatewayLabel: "网关",
 		reconnect: "重连",
 	},
 
@@ -279,12 +290,12 @@ export const zh: Dict = {
 	welcome: {
 		title: "欢迎使用 ClawMate",
 		subtitle: "请选择连接方式，后续可在设置中切换",
-		licenseTitle: "License 激活",
-		licenseDesc: "输入 License Key 连接到云端 OpenClaw 服务，适合订阅制用户。",
-		licenseHint: "激活后由云端统一管理配置",
-		localTitle: "连接本地实例",
-		localDesc: "自动发现并连接本机已安装的 OpenClaw，适合私有部署用户。",
-		localHint: "配置存储在本地，完全离线可用",
+		licenseTitle: "租户连接",
+		licenseDesc: "输入租户 License Key，由租户服务返回网关连接参数。",
+		licenseHint: "适合 SaaS 租户接入场景",
+		localTitle: "直连网关",
+		localDesc: "直接连接网关（本地自动探测，或手动输入云端网关地址）。",
+		localHint: "适合私有部署与自托管场景",
 		initializing: "正在初始化...",
 		continue: "继续",
 		skip: "稍后设置",
@@ -294,12 +305,12 @@ export const zh: Dict = {
 	localConnect: {
 		idle: "连接本地 OpenClaw",
 		scanning: "正在搜索服务...",
-		pairing: "正在配对设备...",
-		restarting: "正在重启服务...",
+		pairing: "正在准备连接参数...",
+		restarting: "等待服务就绪...",
 		connecting: "正在连接...",
 		done: "已连接",
 		error: "重试",
-		desc: "自动搜索并连接本地安装的 OpenClaw 服务（需本机安装，不支持容器）。首次连接会写入设备授权并重启服务。",
+		desc: "自动搜索并连接本地安装的 OpenClaw Gateway（只读探测，不改写本地配置）。",
 		connected: "已连接到本地 OpenClaw",
 		errorMsg: "连接失败，查看下方日志，或手动重启 openclaw 服务后重试",
 		connectedBtn: "已连接",
@@ -307,19 +318,19 @@ export const zh: Dict = {
 
 	// Settings
 	settings: {
-		licenseActivation: "License 激活",
+		licenseActivation: "租户连接",
 		currentKey: "当前 Key",
 		expiry: "到期时间",
 		permanent: "永久有效",
 		authStatus: "授权状态",
 		activated: "● 已激活",
 		notConnected: "○ 未连接",
-		newKey: "新 License Key",
-		changeKey: "更换 License Key",
+		newKey: "新租户 Key",
+		changeKey: "更换租户 Key",
 		cancel: "取消",
 		verifying: "验证中...",
 		connecting: "连接中...",
-		verifyAndActivate: "验证并激活",
+		verifyAndActivate: "验证并连接",
 		nodeStatus: "节点状态",
 		authStatusLabel: "授权状态",
 		expiryDate: "到期日期",
@@ -338,8 +349,8 @@ export const zh: Dict = {
 		sensitiveOnly: "敏感操作询问",
 		never: "不询问",
 		// Change key confirm dialog
-		confirmChangeKey: "更换 License Key",
-		confirmChangeDesc: "即将切换到新的 License Key，此操作将会：",
+		confirmChangeKey: "更换租户 Key",
+		confirmChangeDesc: "即将切换到新的租户 Key，此操作将会：",
 		confirmBullet1: "当前已绑定设备会自动解绑",
 		confirmBullet2: "重新授权后节点数据将清空",
 		irreversible: "此操作不可撤销，请谨慎操作。",
@@ -362,17 +373,28 @@ export const zh: Dict = {
 		sectionNode: "智能体",
 		sectionPreferences: "偏好设置",
 		current: "当前",
-		cloud: "云端",
-		local: "本地",
+		cloud: "租户",
+		local: "直连",
 		keyLabel: "Key",
 		expiryLabel: "到期",
 		expiryPermanent: "永久",
-		licenseModalTitle: "License 激活",
+		licenseModalTitle: "租户连接",
 		currentKeyLabel: "当前 Key",
 		expiryTimeLabel: "到期时间",
-		changeAndActivate: "更换并激活",
+		changeAndActivate: "更换并连接",
 		localModalTitle: "本地 OpenClaw",
-		modeCloud: "License 云端",
-		modeLocal: "本地 OpenClaw",
+		directModalTitle: "直连网关",
+		directSelectHint: "请选择直连目标。",
+		directLocalGateway: "本地网关",
+		directLocalDesc: "自动探测本机已安装的网关并直连",
+		directCloudGateway: "云端网关",
+		directCloudDesc: "手动输入云端网关地址直连",
+		backToSelect: "返回选择",
+		cloudGatewayAddr: "云端网关地址",
+		cloudGatewayToken: "网关 Token（可选）",
+		cloudGatewayTokenPlaceholder: "留空表示无鉴权或由代理鉴权",
+		connectNow: "立即连接",
+		modeCloud: "租户连接",
+		modeLocal: "网关直连",
 	},
 };

@@ -1,11 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
 import { toast } from "sonner";
-import {
-	useBootstrapStore,
-	useConfigStore,
-	useConnectionStore,
-} from "../store";
+import { useConfigStore, useConnectionStore } from "../store";
 import type { VerifyResponse } from "../types";
 import { useTauriEvent } from "./useTauri";
 
@@ -15,13 +11,26 @@ const VERIFY_ENDPOINT = `${TENANT_API_BASE}/api/verify`;
 interface DeviceIdentity {
 	device_id: string;
 	public_key_raw: string;
+	private_key_raw?: string;
+}
+
+interface DirectGatewayOptions {
+	gatewayUrl: string;
+	gatewayToken?: string;
+	gatewayWebUI?: string;
+	profileLabel?: string;
 }
 
 export function useNodeConnection() {
-	const { setStatus, setError } = useConnectionStore();
-	const { licenseKey, setRuntimeConfig, setUserProfile, setSessionMeta } =
-		useConfigStore();
-	const { setNeeds } = useBootstrapStore();
+	const { setStatus, setError, clearError } = useConnectionStore();
+	const {
+		licenseKey,
+		connectionMode,
+		runtimeConfig,
+		setRuntimeConfig,
+		setUserProfile,
+		setSessionMeta,
+	} = useConfigStore();
 
 	useTauriEvent(
 		"ws:connected",
@@ -43,6 +52,7 @@ export function useNodeConnection() {
 		}
 
 		try {
+			clearError();
 			setStatus("auth_checking");
 			const identity = await getDeviceIdentity();
 			const deviceName = getDeviceName();
@@ -87,9 +97,6 @@ export function useNodeConnection() {
 					licenseId: nodeConfig.licenseId,
 				});
 			}
-			if (result.data.needsBootstrap) {
-				setNeeds(result.data.needsBootstrap);
-			}
 
 			setStatus("connecting");
 			await invoke("connect_gateway", {
@@ -97,22 +104,97 @@ export function useNodeConnection() {
 				token: nodeConfig.gatewayToken,
 				agentId: nodeConfig.agentId,
 				deviceName: nodeConfig.deviceName,
+				publicKeyRaw: identity.public_key_raw,
+				privateKeyRaw: identity.private_key_raw ?? null,
 			});
 		} catch (e) {
 			setError(String(e));
 			setStatus("error");
 		}
 	}, [
+		clearError,
 		licenseKey,
 		setError,
-		setNeeds,
 		setRuntimeConfig,
 		setSessionMeta,
 		setStatus,
 		setUserProfile,
 	]);
 
-	return { verifyAndConnect };
+	const connectDirectGateway = useCallback(
+		async (opts: DirectGatewayOptions) => {
+			const gatewayUrl = opts.gatewayUrl.trim();
+			const gatewayToken = opts.gatewayToken?.trim() ?? "";
+			if (!gatewayUrl) {
+				setError("网关地址不能为空");
+				return false;
+			}
+
+			try {
+				clearError();
+				setStatus("connecting");
+
+				const identity = await getDeviceIdentity();
+				const deviceName = getDeviceName();
+				const gatewayWebUI = resolveGatewayWebUI(
+					opts.gatewayWebUI?.trim() || gatewayUrl,
+					gatewayToken,
+				);
+
+				setRuntimeConfig({
+					gatewayUrl,
+					gatewayWebUI,
+					gatewayToken,
+					agentId: identity.device_id,
+					deviceName,
+				});
+				setUserProfile({
+					licenseStatus: opts.profileLabel ?? "Direct",
+					expiryDate: "Direct Mode",
+				});
+
+				await invoke("connect_gateway", {
+					gatewayUrl,
+					token: gatewayToken,
+					agentId: identity.device_id,
+					deviceName,
+					publicKeyRaw: identity.public_key_raw,
+					privateKeyRaw: identity.private_key_raw ?? null,
+				});
+				return true;
+			} catch (e) {
+				setError(String(e));
+				setStatus("error");
+				return false;
+			}
+		},
+		[clearError, setError, setRuntimeConfig, setStatus, setUserProfile],
+	);
+
+	const reconnectCurrent = useCallback(async () => {
+		if (connectionMode === "license") {
+			await verifyAndConnect();
+			return;
+		}
+		if (!runtimeConfig) {
+			setError("未找到可重连的网关配置，请先完成直连");
+			return;
+		}
+		await connectDirectGateway({
+			gatewayUrl: runtimeConfig.gatewayUrl,
+			gatewayToken: runtimeConfig.gatewayToken,
+			gatewayWebUI: runtimeConfig.gatewayWebUI,
+			profileLabel: "Direct",
+		});
+	}, [
+		connectDirectGateway,
+		connectionMode,
+		runtimeConfig,
+		setError,
+		verifyAndConnect,
+	]);
+
+	return { verifyAndConnect, connectDirectGateway, reconnectCurrent };
 }
 
 async function getDeviceIdentity(): Promise<DeviceIdentity> {
@@ -120,6 +202,7 @@ async function getDeviceIdentity(): Promise<DeviceIdentity> {
 		return {
 			device_id: "dev-device-id",
 			public_key_raw: "dev-public-key",
+			private_key_raw: "dev-private-key",
 		};
 	}
 	return invoke<DeviceIdentity>("get_device_identity");
@@ -129,6 +212,27 @@ function getDeviceName(): string {
 	const host = globalThis.location?.hostname || "exec-node";
 	const platform = globalThis.navigator?.platform || "unknown";
 	return `${host}-${platform}`;
+}
+
+function resolveGatewayWebUI(endpoint: string, token: string): string {
+	const raw = endpoint.trim();
+	if (!raw) return "";
+
+	const withScheme = /^https?:\/\//i.test(raw)
+		? raw
+		: /^wss?:\/\//i.test(raw)
+			? raw.replace(/^ws/i, "http")
+			: `https://${raw}`;
+
+	try {
+		const url = new URL(withScheme);
+		if (!url.hash && token) {
+			url.hash = `token=${token}`;
+		}
+		return url.toString();
+	} catch {
+		return withScheme;
+	}
 }
 
 async function mockVerify(

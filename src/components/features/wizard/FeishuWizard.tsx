@@ -1,19 +1,15 @@
-import { invoke } from "@tauri-apps/api/core";
 import { Loader2, MessageSquare } from "lucide-react";
 import { useState } from "react";
-import { useConfigStore } from "../../../store";
+import { useGatewayConfig } from "../../../hooks/useGatewayConfig";
 import { Button, Card } from "../../ui";
 
-const TENANT_API_BASE = import.meta.env.VITE_TENANT_API_BASE ?? "";
-
 interface Props {
-	licenseId: number;
 	onSuccess: () => void;
 	onClose: () => void;
 }
 
-export function FeishuWizard({ licenseId, onSuccess, onClose }: Props) {
-	const { licenseKey } = useConfigStore();
+export function FeishuWizard({ onSuccess, onClose }: Props) {
+	const { patchConfig } = useGatewayConfig();
 	const [appId, setAppId] = useState("");
 	const [appSecret, setAppSecret] = useState("");
 	const [error, setError] = useState<string | null>(null);
@@ -26,24 +22,17 @@ export function FeishuWizard({ licenseId, onSuccess, onClose }: Props) {
 		setLoading(true);
 		setError(null);
 		try {
-			const identity = await invoke<{ device_id: string }>(
-				"get_device_identity",
-			);
-			const res = await fetch(
-				`${TENANT_API_BASE}/api/licenses/${licenseId}/bootstrap-config`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						licenseKey,
-						hwid: identity.device_id,
-						feishu: { appId: appId.trim(), appSecret: appSecret.trim() },
-					}),
+			const ok = await patchConfig({
+				channels: {
+					feishu: {
+						enabled: true,
+						appId: appId.trim(),
+						appSecret: appSecret.trim(),
+					},
 				},
-			);
-			const body = await res.json();
-			if (!res.ok || !body.success) {
-				setError(body.error ?? "提交失败，请重试");
+			});
+			if (!ok) {
+				setError("提交失败，请检查网关连接和 operator 权限");
 				return;
 			}
 			onSuccess();

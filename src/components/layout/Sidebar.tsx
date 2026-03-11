@@ -20,7 +20,7 @@ import { useConfigStore, useConnectionStore } from "../../store";
 export function Sidebar() {
 	const { runtimeConfig } = useConfigStore();
 	const { status } = useConnectionStore();
-	const { verifyAndConnect } = useNodeConnection();
+	const { reconnectCurrent } = useNodeConnection();
 	const [collapsed, setCollapsed] = useState(false);
 	const t = useT();
 
@@ -95,7 +95,7 @@ export function Sidebar() {
 						{!isOnline && (
 							<button
 								type="button"
-								onClick={() => verifyAndConnect()}
+								onClick={() => reconnectCurrent()}
 								disabled={isLoading}
 								className="p-1 rounded-md text-surface-on-variant hover:text-surface-on hover:bg-surface-variant/50 transition-colors disabled:opacity-40"
 								title={t.sidebar.reconnect}
@@ -112,7 +112,7 @@ export function Sidebar() {
 					/* 折叠态：可点击的小圆点（点击重连） */
 					<button
 						type="button"
-						onClick={() => !isOnline && verifyAndConnect()}
+						onClick={() => !isOnline && reconnectCurrent()}
 						disabled={isLoading || isOnline}
 						className={`relative flex h-2.5 w-2.5 ${!isOnline ? "cursor-pointer" : "cursor-default"}`}
 						title={

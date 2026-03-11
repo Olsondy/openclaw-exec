@@ -1,14 +1,16 @@
 import { MessageSquare, Send } from "lucide-react";
 import { useState } from "react";
+import { FeishuWizard } from "../components/features/wizard/FeishuWizard";
 import { TelegramWizard } from "../components/features/wizard/TelegramWizard";
 import { TopBar } from "../components/layout/TopBar";
 import { Button, Card } from "../components/ui";
 import { useT } from "../i18n";
-import { useBootstrapStore, useConfigStore } from "../store";
+import { useConnectionStore } from "../store";
 
 export function ChannelPage() {
-	const { openWizard } = useBootstrapStore();
-	const { licenseId } = useConfigStore();
+	const { status } = useConnectionStore();
+	const isOnline = status === "online";
+	const [feishuWizardOpen, setFeishuWizardOpen] = useState(false);
 	const [telegramWizardOpen, setTelegramWizardOpen] = useState(false);
 	const t = useT();
 
@@ -27,10 +29,14 @@ export function ChannelPage() {
 					<p className="text-xs text-surface-on-variant mb-3">
 						{t.channel.feishuDesc}
 					</p>
-					<Button variant="outlined" onClick={openWizard} disabled={!licenseId}>
+					<Button
+						variant="outlined"
+						onClick={() => setFeishuWizardOpen(true)}
+						disabled={!isOnline}
+					>
 						{t.channel.configureFeishu}
 					</Button>
-					{!licenseId && (
+					{!isOnline && (
 						<p className="text-xs text-surface-on-variant mt-2">
 							{t.channel.activateFirst}
 						</p>
@@ -51,11 +57,11 @@ export function ChannelPage() {
 					<Button
 						variant="outlined"
 						onClick={() => setTelegramWizardOpen(true)}
-						disabled={!licenseId}
+						disabled={!isOnline}
 					>
 						{t.channel.configureTelegram}
 					</Button>
-					{!licenseId && (
+					{!isOnline && (
 						<p className="text-xs text-surface-on-variant mt-2">
 							{t.channel.activateFirst}
 						</p>
@@ -63,9 +69,15 @@ export function ChannelPage() {
 				</Card>
 			</div>
 
-			{telegramWizardOpen && licenseId && (
+			{feishuWizardOpen && (
+				<FeishuWizard
+					onSuccess={() => setFeishuWizardOpen(false)}
+					onClose={() => setFeishuWizardOpen(false)}
+				/>
+			)}
+
+			{telegramWizardOpen && (
 				<TelegramWizard
-					licenseId={licenseId}
 					onSuccess={() => setTelegramWizardOpen(false)}
 					onClose={() => setTelegramWizardOpen(false)}
 				/>

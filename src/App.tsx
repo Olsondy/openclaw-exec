@@ -4,11 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ChannelAuthDialog } from "./components/features/channel-auth/ChannelAuthDialog";
 import { WelcomeModal } from "./components/features/welcome/WelcomeModal";
-import { ApiWizard } from "./components/features/wizard/ApiWizard";
-import { FeishuWizard } from "./components/features/wizard/FeishuWizard";
 import { AppLayout } from "./components/layout/AppLayout";
 import { Toaster } from "./components/ui/sonner";
-import { useNodeConnection } from "./hooks/useNodeConnection";
 import { useTauriEvent } from "./hooks/useTauri";
 import { useI18nStore } from "./i18n";
 import { ActivityPage } from "./pages/ActivityPage";
@@ -16,7 +13,7 @@ import { CapabilitiesPage } from "./pages/CapabilitiesPage";
 import { ChannelPage } from "./pages/ChannelPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { SettingsPage } from "./pages/SettingsPage";
-import { useBootstrapStore, useConfigStore } from "./store";
+import { useConfigStore } from "./store";
 import type { ConnectionMode } from "./store/config.store";
 
 type GatewayEventEnvelope = {
@@ -25,9 +22,7 @@ type GatewayEventEnvelope = {
 };
 
 function AppInner() {
-	const { wizardOpen, needs, closeWizard } = useBootstrapStore();
-	const { licenseId, setConnectionMode } = useConfigStore();
-	const { verifyAndConnect } = useNodeConnection();
+	const { setConnectionMode } = useConfigStore();
 	const [showChannelAuthDialog, setShowChannelAuthDialog] = useState(false);
 	const [showWelcome, setShowWelcome] = useState(false);
 	const theme = useI18nStore((s) => s.theme);
@@ -91,26 +86,6 @@ function AppInner() {
 					<Route path="settings" element={<SettingsPage />} />
 				</Route>
 			</Routes>
-			{wizardOpen && needs.feishu && licenseId && (
-				<FeishuWizard
-					licenseId={licenseId}
-					onSuccess={() => {
-						closeWizard();
-						verifyAndConnect();
-					}}
-					onClose={closeWizard}
-				/>
-			)}
-			{wizardOpen && needs.modelAuth && licenseId && (
-				<ApiWizard
-					licenseId={licenseId}
-					onSuccess={() => {
-						closeWizard();
-						verifyAndConnect();
-					}}
-					onClose={closeWizard}
-				/>
-			)}
 			{showChannelAuthDialog && (
 				<ChannelAuthDialog onClose={() => setShowChannelAuthDialog(false)} />
 			)}

@@ -1,13 +1,9 @@
-import { invoke } from "@tauri-apps/api/core";
 import { Cpu, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useConfigStore } from "../../../store";
+import { useGatewayConfig } from "../../../hooks/useGatewayConfig";
 import { Button, Card } from "../../ui";
 
-const TENANT_API_BASE = import.meta.env.VITE_TENANT_API_BASE ?? "";
-
 interface Props {
-	licenseId: number;
 	onSuccess: () => void;
 	onClose: () => void;
 }
@@ -39,8 +35,8 @@ const PROVIDERS = [
 	},
 ];
 
-export function ApiWizard({ licenseId, onSuccess, onClose }: Props) {
-	const { licenseKey } = useConfigStore();
+export function ApiWizard({ onSuccess, onClose }: Props) {
+	const { patchConfig } = useGatewayConfig();
 	const [providerId, setProviderId] = useState("");
 	const [modelId, setModelId] = useState("");
 	const [modelName, setModelName] = useState("");
@@ -60,32 +56,47 @@ export function ApiWizard({ licenseId, onSuccess, onClose }: Props) {
 		setLoading(true);
 		setError(null);
 		try {
-			const identity = await invoke<{ device_id: string }>(
-				"get_device_identity",
-			);
-			const res = await fetch(
-				`${TENANT_API_BASE}/api/licenses/${licenseId}/bootstrap-config`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						licenseKey,
-						hwid: identity.device_id,
-						modelAuth: {
-							providerId: provider.id,
-							providerLabel: provider.label,
-							baseUrl: provider.baseUrl,
-							api: provider.api,
-							modelId: modelId.trim(),
-							modelName: modelName.trim(),
+			const modelIdValue = modelId.trim();
+			const modelNameValue = modelName.trim();
+			const providerIdValue = provider.id;
+			const ok = await patchConfig({
+				auth: {
+					profiles: {
+						[`${providerIdValue}:default`]: {
+							provider: providerIdValue,
+							label: provider.label,
+							mode: "api_key",
 							apiKey: apiKey.trim(),
 						},
-					}),
+					},
 				},
-			);
-			const body = await res.json();
-			if (!res.ok || !body.success) {
-				setError(body.error ?? "提交失败，请重试");
+				models: {
+					mode: "merge",
+					providers: {
+						[providerIdValue]: {
+							baseUrl: provider.baseUrl,
+							api: provider.api,
+							apiKey: apiKey.trim(),
+							label: provider.label,
+							models: [
+								{
+									id: modelIdValue,
+									name: modelNameValue,
+								},
+							],
+						},
+					},
+				},
+				agents: {
+					defaults: {
+						model: {
+							primary: `${providerIdValue}/${modelIdValue}`,
+						},
+					},
+				},
+			});
+			if (!ok) {
+				setError("提交失败，请检查网关连接和 operator 权限");
 				return;
 			}
 			onSuccess();
@@ -109,8 +120,7 @@ export function ApiWizard({ licenseId, onSuccess, onClose }: Props) {
 					</h2>
 				</div>
 				<p className="text-xs text-surface-on-variant mb-4">
-					该配置会覆盖 license
-					初始写入的模型配置，仅写入节点文件，不保存到租户服务数据库。
+					该配置将通过 operator 权限直接写入网关配置。
 				</p>
 
 				<div className="space-y-3">
