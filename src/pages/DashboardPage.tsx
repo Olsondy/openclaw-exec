@@ -10,7 +10,6 @@ import {
 	Download,
 	HelpCircle,
 	Server,
-	XCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { TopBar } from "../components/layout/TopBar";
@@ -18,7 +17,7 @@ import { Card } from "../components/ui";
 import { useOperatorConnection } from "../hooks/useOperatorConnection";
 import { useUpdater } from "../hooks/useUpdater";
 import { useT } from "../i18n";
-import { useConnectionStore, useTasksStore } from "../store";
+import { useTasksStore } from "../store";
 import type { ActivityLog } from "../types";
 
 const TYPE_COLORS: Record<string, string> = {
@@ -29,7 +28,6 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export function DashboardPage() {
-	const { errorMessage } = useConnectionStore();
 	const { logs, pendingApprovals, getStats } = useTasksStore();
 	const { newVersion, installing, installUpdate } = useUpdater();
 	const { opCall, status: operatorStatus } = useOperatorConnection();
@@ -254,14 +252,6 @@ export function DashboardPage() {
 								</div>
 							))}
 						</div>
-					</Card>
-				)}
-
-				{/* 错误提示 */}
-				{errorMessage && (
-					<Card className="border-red-500/20 bg-red-500/5 flex items-center gap-3 py-3 px-4">
-						<XCircle size={15} className="text-red-500 shrink-0" />
-						<p className="text-sm text-surface-on">{errorMessage}</p>
 					</Card>
 				)}
 

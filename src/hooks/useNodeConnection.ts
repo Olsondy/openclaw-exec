@@ -299,7 +299,7 @@ export function useNodeConnection() {
 					await invoke("save_local_profile", {
 						profile: {
 							gatewayUrl,
-							gatewayWebUI,
+							gatewayWebUi: gatewayWebUI,
 							gatewayToken: gatewayToken || null,
 							agentId: identity.device_id,
 							deviceName,

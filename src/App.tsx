@@ -145,6 +145,25 @@ function AppInner() {
 				"get_local_profile",
 			).catch(() => null);
 
+			const addReconnectLog = (
+				level: "info" | "warning" | "error" | "success",
+				title: string,
+				description: string,
+			) => {
+				useTasksStore.getState().addClientLog({
+					id: `mate-reconnect-${Date.now()}`,
+					timestamp: new Date(),
+					task_id: "",
+					source: "mate",
+					level,
+					title,
+					description,
+					tags: ["mate", "reconnect", "local"],
+				});
+			};
+			const maskToken = (tk: string) =>
+				tk ? `${tk.slice(0, 4)}***${tk.slice(-4)}` : "(empty)";
+
 			const reconnectLocalGateway = async (): Promise<boolean> => {
 				const discovered = await invoke<{
 					gateway_url: string;
@@ -152,6 +171,11 @@ function AppInner() {
 					token: string;
 				}>("local_connect").catch(() => null);
 				if (!discovered) return false;
+				addReconnectLog(
+					"info",
+					"Reconnect: first local_connect",
+					`url=${discovered.gateway_url} token=${maskToken(discovered.token)}`,
+				);
 				let ok = await connectDirectGateway({
 					gatewayUrl: discovered.gateway_url,
 					gatewayWebUI: discovered.gateway_web_ui,
@@ -161,6 +185,11 @@ function AppInner() {
 				if (!ok) {
 					const currentError = useConnectionStore.getState().errorMessage || "";
 					if (isGatewayTokenMismatchError(currentError)) {
+						addReconnectLog(
+							"warning",
+							"Reconnect: token mismatch, restarting daemon",
+							`token=${maskToken(discovered.token)} error=${currentError}`,
+						);
 						await invoke("local_gateway_daemon", {
 							action: "restart",
 						}).catch(() => null);
@@ -170,6 +199,11 @@ function AppInner() {
 							token: string;
 						}>("local_connect").catch(() => null);
 						if (retryDiscovered) {
+							addReconnectLog(
+								"info",
+								"Reconnect: second local_connect after restart",
+								`token=${maskToken(retryDiscovered.token)} same=${discovered.token === retryDiscovered.token}`,
+							);
 							ok = await connectDirectGateway({
 								gatewayUrl: retryDiscovered.gateway_url,
 								gatewayWebUI: retryDiscovered.gateway_web_ui,

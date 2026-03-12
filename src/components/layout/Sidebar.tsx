@@ -6,9 +6,9 @@ import {
 	MessageSquare,
 	PanelLeftClose,
 	PanelLeftOpen,
+	Power,
 	RefreshCw,
 	Settings,
-	StopCircle,
 	Terminal,
 } from "lucide-react";
 import { useState } from "react";
@@ -24,6 +24,7 @@ export function Sidebar() {
 
 	const disconnectGateway = async () => {
 		await invoke("disconnect_gateway");
+		await invoke("op_disconnect").catch(() => {});
 	};
 	const [collapsed, setCollapsed] = useState(false);
 	const t = useT();
@@ -96,10 +97,10 @@ export function Sidebar() {
 							<button
 								type="button"
 								onClick={disconnectGateway}
-								className="p-1 rounded-md text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+								className="p-1 rounded-md text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition-colors"
 								title={t.sidebar.gatewayDisconnected}
 							>
-								<StopCircle size={12} />
+								<Power size={12} strokeWidth={STROKE_WIDTH} />
 							</button>
 						) : (
 							<button

@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
+};
 
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -12,6 +15,8 @@ const SIDECAR_TIMEOUT_MS: u64 = 30_000;
 const CHANNEL_AUTH_STATUS_REQUEST_ID: &str = "channel-auth-status-1";
 const CONNECT_CHALLENGE_TIMEOUT_MS: u64 = 10_000;
 const CONNECT_RESPONSE_TIMEOUT_MS: u64 = 10_000;
+const WS_HEARTBEAT_INTERVAL_MS: u64 = 10_000;
+const WS_HEARTBEAT_TIMEOUT_MS: u64 = 30_000;
 const GATEWAY_PROTOCOL_VERSION: u32 = 3;
 const NODE_CLIENT_ID: &str = "node-host";
 const NODE_CLIENT_MODE: &str = "node";
@@ -161,9 +166,57 @@ type WsRead = futures_util::stream::SplitStream<
 >;
 
 static WS_SINK: std::sync::OnceLock<WsSink> = std::sync::OnceLock::new();
+static WS_CONN_SEQ: AtomicU64 = AtomicU64::new(0);
+static WS_ACTIVE_CONN_ID: AtomicU64 = AtomicU64::new(0);
 
 fn get_ws_sink() -> &'static WsSink {
     WS_SINK.get_or_init(|| Arc::new(Mutex::new(None)))
+}
+
+fn is_connection_active(conn_id: u64) -> bool {
+    WS_ACTIVE_CONN_ID.load(Ordering::SeqCst) == conn_id
+}
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64
+}
+
+async fn clear_connection_state_if_active(conn_id: u64) {
+    if WS_ACTIVE_CONN_ID
+        .compare_exchange(conn_id, 0, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return;
+    }
+
+    let mut sink = get_ws_sink().lock().await;
+    if let Some(ref mut w) = *sink {
+        w.close().await.ok();
+    }
+    *sink = None;
+}
+
+async fn notify_disconnect_if_active(app: &tauri::AppHandle, conn_id: u64, error: Option<String>) {
+    if WS_ACTIVE_CONN_ID
+        .compare_exchange(conn_id, 0, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return;
+    }
+
+    if let Some(err) = error {
+        app.emit("ws:error", err).ok();
+    }
+    app.emit("ws:disconnected", ()).ok();
+
+    let mut sink = get_ws_sink().lock().await;
+    if let Some(ref mut w) = *sink {
+        w.close().await.ok();
+    }
+    *sink = None;
 }
 
 // ─── Tauri 命令 ──────────────────────────────────────────────────
@@ -179,6 +232,8 @@ pub async fn connect_gateway(
     private_key_raw: Option<String>,
 ) -> Result<(), String> {
     let url = build_gateway_ws_url(&gateway_url, &token)?;
+    let conn_id = WS_CONN_SEQ.fetch_add(1, Ordering::SeqCst) + 1;
+    WS_ACTIVE_CONN_ID.store(conn_id, Ordering::SeqCst);
 
     // 新连接前先清理旧连接，避免并发读写同一个全局 sink
     {
@@ -189,12 +244,22 @@ pub async fn connect_gateway(
         *sink = None;
     }
 
-    let (ws_stream, _) = connect_async(&url)
-        .await
-        .map_err(format_connect_async_error)?;
+    let (ws_stream, _) = match connect_async(&url).await {
+        Ok(v) => v,
+        Err(e) => {
+            clear_connection_state_if_active(conn_id).await;
+            return Err(format_connect_async_error(e));
+        }
+    };
     let (mut write, mut read) = ws_stream.split();
 
-    let challenge_nonce = read_connect_challenge(&mut read).await?;
+    let challenge_nonce = match read_connect_challenge(&mut read).await {
+        Ok(v) => v,
+        Err(e) => {
+            clear_connection_state_if_active(conn_id).await;
+            return Err(e);
+        }
+    };
 
     // 构造 device 签名（Gateway 新协议要求）
     let device_info = build_device_info(
@@ -239,10 +304,20 @@ pub async fn connect_gateway(
         .await
         .map_err(|e| format!("握手帧发送失败: {}", e))?;
 
-    let device_token = wait_connect_response(&mut read).await?;
+    let device_token = match wait_connect_response(&mut read).await {
+        Ok(v) => v,
+        Err(e) => {
+            clear_connection_state_if_active(conn_id).await;
+            return Err(e);
+        }
+    };
 
     // 到这里才算真正连通：先挂载 sink，再发连接成功事件
     {
+        if !is_connection_active(conn_id) {
+            write.close().await.ok();
+            return Ok(());
+        }
         let mut sink = get_ws_sink().lock().await;
         *sink = Some(write);
     }
@@ -252,36 +327,93 @@ pub async fn connect_gateway(
     }
     request_channel_auth_status().await;
 
+    let last_inbound_ms = Arc::new(AtomicU64::new(now_ms()));
+    let last_inbound_for_heartbeat = last_inbound_ms.clone();
+    let app_for_heartbeat = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let interval = std::time::Duration::from_millis(WS_HEARTBEAT_INTERVAL_MS);
+        loop {
+            tokio::time::sleep(interval).await;
+
+            if !is_connection_active(conn_id) {
+                break;
+            }
+
+            let last = last_inbound_for_heartbeat.load(Ordering::Relaxed);
+            if now_ms().saturating_sub(last) > WS_HEARTBEAT_TIMEOUT_MS {
+                notify_disconnect_if_active(
+                    &app_for_heartbeat,
+                    conn_id,
+                    Some(format!("心跳超时（{}ms）", WS_HEARTBEAT_TIMEOUT_MS)),
+                )
+                .await;
+                break;
+            }
+
+            let ping_result = {
+                let mut sink = get_ws_sink().lock().await;
+                if !is_connection_active(conn_id) {
+                    None
+                } else if let Some(ref mut w) = *sink {
+                    Some(
+                        w.send(Message::Ping(Vec::<u8>::new().into()))
+                            .await
+                            .map_err(|e| e.to_string()),
+                    )
+                } else {
+                    Some(Err("连接已关闭".to_string()))
+                }
+            };
+
+            match ping_result {
+                None => break,
+                Some(Ok(())) => {}
+                Some(Err(err)) => {
+                    notify_disconnect_if_active(
+                        &app_for_heartbeat,
+                        conn_id,
+                        Some(format!("心跳发送失败: {}", err)),
+                    )
+                    .await;
+                    break;
+                }
+            }
+        }
+    });
+
+    let last_inbound_for_read = last_inbound_ms.clone();
     let app_for_loop = app.clone();
     tauri::async_runtime::spawn(async move {
         // 处理消息循环
         loop {
             match read.next().await {
                 Some(Ok(Message::Text(text))) => {
+                    last_inbound_for_read.store(now_ms(), Ordering::Relaxed);
                     handle_gateway_message(&app_for_loop, &text).await;
                 }
+                Some(Ok(Message::Binary(_))) | Some(Ok(Message::Pong(_))) => {
+                    last_inbound_for_read.store(now_ms(), Ordering::Relaxed);
+                }
+                Some(Ok(Message::Ping(_))) => {
+                    last_inbound_for_read.store(now_ms(), Ordering::Relaxed);
+                }
                 Some(Ok(Message::Close(_))) => {
-                    app_for_loop.emit("ws:disconnected", ()).ok();
+                    notify_disconnect_if_active(&app_for_loop, conn_id, None).await;
                     break;
                 }
                 Some(Err(e)) => {
-                    app_for_loop.emit("ws:error", e.to_string()).ok();
-                    app_for_loop.emit("ws:disconnected", ()).ok();
+                    notify_disconnect_if_active(&app_for_loop, conn_id, Some(e.to_string())).await;
                     break;
                 }
                 Some(_) => {}
                 None => {
                     // 对端异常退出（例如手动停止 gateway）时，Stream 会结束为 None。
                     // 这里必须显式通知前端断开，避免状态卡在 online。
-                    app_for_loop.emit("ws:disconnected", ()).ok();
+                    notify_disconnect_if_active(&app_for_loop, conn_id, None).await;
                     break;
                 }
             }
         }
-
-        // 断开时清理 sink
-        let mut sink = get_ws_sink().lock().await;
-        *sink = None;
     });
 
     Ok(())
