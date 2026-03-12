@@ -83,4 +83,34 @@ describe("SettingsPage breathing indicators", () => {
 		);
 		expect(localConnectCalls.length).toBe(1);
 	});
+
+	it("shows switch-mode dialog when switching from tenant to direct while online", async () => {
+		useConnectionStore.setState({
+			status: "online",
+			errorMessage: null,
+			onlineAt: new Date(),
+		});
+		useConfigStore.setState({
+			connectionMode: "license",
+			directMode: null,
+			licenseKey: "TEST-XXXX-XXXX-KEY1",
+			expiryDate: "Permanent",
+		});
+		invokeMock.mockResolvedValue(undefined);
+
+		render(<SettingsPage />);
+		const directLabel = screen.getByText("直连");
+		fireEvent.click(directLabel.closest("button") as HTMLButtonElement);
+
+		expect(screen.getByText("切换连接方式")).toBeInTheDocument();
+		fireEvent.click(screen.getByText("确认切换"));
+
+		await waitFor(() => {
+			expect(invokeMock).toHaveBeenCalledWith("save_app_config", {
+				config: { connectionMode: "local" },
+			});
+		});
+		expect(invokeMock).toHaveBeenCalledWith("disconnect_gateway");
+		expect(invokeMock).toHaveBeenCalledWith("op_disconnect");
+	});
 });

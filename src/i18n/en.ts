@@ -269,7 +269,7 @@ export const en: Dict = {
 		switchModeExporting: "Exporting...",
 		switchModeExportAction: "Export Config Snapshot",
 		switchModeResetItemToken: "Current connection token / gateway",
-		switchModeResetItemSession: "License key (or local pairing session)",
+		switchModeResetItemSession: "Current session context",
 		switchModeResetItemApproval: "Approval rules will be reset to defaults",
 		switchModeConfirm: "Confirm Switch",
 		modeCloud: "Tenant Connection",

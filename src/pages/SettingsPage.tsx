@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { SwitchModeDialog } from "../components/features/settings/SwitchModeDialog";
 import { ApiWizard } from "../components/features/wizard/ApiWizard";
 import { TopBar } from "../components/layout/TopBar";
 import { Button, Card, Switch } from "../components/ui";
@@ -31,6 +32,7 @@ import type { Locale, Theme } from "../i18n";
 import { useI18nStore, useT } from "../i18n";
 import { makeLogId } from "../lib/activity-log";
 import { useConfigStore, useConnectionStore, useTasksStore } from "../store";
+import type { ConnectionMode } from "../store/config.store";
 import type { LogLevel } from "../types";
 
 function maskLicenseKey(key: string): string {
@@ -115,6 +117,11 @@ export function SettingsPage() {
 		| "cloud-restart"
 		| null
 	>(null);
+	const [switchModeRequest, setSwitchModeRequest] = useState<{
+		fromMode: ConnectionMode;
+		toMode: ConnectionMode;
+		openTarget: "license" | "direct";
+	} | null>(null);
 	const [apiWizardOpen, setApiWizardOpen] = useState(false);
 
 	const isLoading = status === "auth_checking" || status === "connecting";
@@ -219,15 +226,35 @@ export function SettingsPage() {
 		await verifyAndConnect();
 	};
 
-	const handleLicenseCardClick = () => {
-		setLicenseModalOpen(true);
-	};
-
-	const handleDirectCardClick = () => {
+	const openDirectModal = () => {
 		setDirectTarget(null);
 		setDirectAddress(directCloudAddress);
 		setDirectStatus(null);
 		setDirectModalOpen(true);
+	};
+
+	const handleLicenseCardClick = () => {
+		if (connectionMode === "local" && isOnline) {
+			setSwitchModeRequest({
+				fromMode: "local",
+				toMode: "license",
+				openTarget: "license",
+			});
+			return;
+		}
+		setLicenseModalOpen(true);
+	};
+
+	const handleDirectCardClick = () => {
+		if (connectionMode === "license" && isOnline) {
+			setSwitchModeRequest({
+				fromMode: "license",
+				toMode: "local",
+				openTarget: "direct",
+			});
+			return;
+		}
+		openDirectModal();
 	};
 
 	const closeDirectModalSuccess = (msg: string) => {
@@ -242,6 +269,38 @@ export function SettingsPage() {
 		await invoke("disconnect_gateway");
 		await invoke("op_disconnect").catch(() => {});
 		setStatus("idle");
+	};
+
+	const handleSwitchModeConfirm = async () => {
+		if (!switchModeRequest) return;
+		const target = switchModeRequest;
+		addDirectActionLog(
+			"info",
+			"Mate: Mode switch requested",
+			`${target.fromMode} -> ${target.toMode}`,
+			["mate", "connection", "mode", "switch", target.fromMode, target.toMode],
+		);
+		await disconnectGatewaySession();
+		setConnectionMode(target.toMode);
+		addDirectActionLog(
+			"success",
+			"Mate: Mode switched",
+			`${target.fromMode} -> ${target.toMode}`,
+			[
+				"mate",
+				"connection",
+				"mode",
+				"switched",
+				target.fromMode,
+				target.toMode,
+			],
+		);
+		setSwitchModeRequest(null);
+		if (target.openTarget === "license") {
+			setLicenseModalOpen(true);
+			return;
+		}
+		openDirectModal();
 	};
 
 	const doConnectDirectCloud = async () => {
@@ -1159,6 +1218,14 @@ export function SettingsPage() {
 						setApiWizardOpen(false);
 					}}
 					onClose={() => setApiWizardOpen(false)}
+				/>
+			)}
+			{switchModeRequest && (
+				<SwitchModeDialog
+					fromMode={switchModeRequest.fromMode}
+					toMode={switchModeRequest.toMode}
+					onCancel={() => setSwitchModeRequest(null)}
+					onConfirm={handleSwitchModeConfirm}
 				/>
 			)}
 		</>

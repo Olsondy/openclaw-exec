@@ -112,9 +112,6 @@ export const useConfigStore = create<ConfigState>()(
 					runtimeConfig: null,
 					userProfile: null,
 					licenseId: null,
-					licenseKey: "",
-					expiryDate: "",
-					approvalRules: defaultApprovalRules,
 				}),
 		}),
 		{

@@ -9,7 +9,7 @@ import { Button } from "../../ui";
 interface Props {
 	fromMode: ConnectionMode;
 	toMode: ConnectionMode;
-	onConfirm: () => void;
+	onConfirm: () => Promise<void> | void;
 	onCancel: () => void;
 }
 
@@ -89,7 +89,9 @@ export function SwitchModeDialog({
 			// 清除内存中的会话数据
 			resetForModeSwitch();
 
-			onConfirm();
+			await onConfirm();
+		} catch (e) {
+			console.error("[switch-mode] confirm failed", e);
 		} finally {
 			setConfirming(false);
 		}

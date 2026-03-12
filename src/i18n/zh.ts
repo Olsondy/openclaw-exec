@@ -507,7 +507,7 @@ export const zh: Dict = {
 		switchModeExporting: "导出中...",
 		switchModeExportAction: "导出配置快照",
 		switchModeResetItemToken: "当前连接 Token / Gateway",
-		switchModeResetItemSession: "License Key（或本地配对会话）",
+		switchModeResetItemSession: "当前会话上下文",
 		switchModeResetItemApproval: "审批规则将重置为默认值",
 		switchModeConfirm: "确认切换",
 		modeCloud: "租户连接",
