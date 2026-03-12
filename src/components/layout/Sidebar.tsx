@@ -8,6 +8,7 @@ import {
 	PanelLeftOpen,
 	RefreshCw,
 	Settings,
+	StopCircle,
 	Terminal,
 } from "lucide-react";
 import { useState } from "react";
@@ -20,6 +21,10 @@ export function Sidebar() {
 	const { runtimeConfig } = useConfigStore();
 	const { status } = useConnectionStore();
 	const { reconnectCurrent } = useNodeConnection();
+
+	const disconnectGateway = async () => {
+		await invoke("disconnect_gateway");
+	};
 	const [collapsed, setCollapsed] = useState(false);
 	const t = useT();
 
@@ -87,7 +92,16 @@ export function Sidebar() {
 										: t.sidebar.gatewayDisconnected}
 							</span>
 						</span>
-						{!isOnline && (
+						{isOnline ? (
+							<button
+								type="button"
+								onClick={disconnectGateway}
+								className="p-1 rounded-md text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+								title={t.sidebar.gatewayDisconnected}
+							>
+								<StopCircle size={12} />
+							</button>
+						) : (
 							<button
 								type="button"
 								onClick={() => reconnectCurrent()}
@@ -104,12 +118,15 @@ export function Sidebar() {
 						)}
 					</div>
 				) : (
-					/* 折叠态：可点击的小圆点（点击重连） */
+					/* 折叠态：在线时点击断开，离线时点击重连 */
 					<button
 						type="button"
-						onClick={() => !isOnline && reconnectCurrent()}
-						disabled={isLoading || isOnline}
-						className={`relative flex h-2.5 w-2.5 ${!isOnline ? "cursor-pointer" : "cursor-default"}`}
+						onClick={() => {
+							if (isOnline) disconnectGateway();
+							else if (!isLoading) reconnectCurrent();
+						}}
+						disabled={isLoading}
+						className={`relative flex h-2.5 w-2.5 ${isLoading ? "cursor-default" : "cursor-pointer"}`}
 						title={
 							isLoading
 								? t.sidebar.gatewayConnecting
