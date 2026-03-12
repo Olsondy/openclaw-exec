@@ -94,32 +94,26 @@ export function useNodeConnection() {
 				["mate", "connection", "tenant", "verify"],
 			);
 
-			let result: VerifyResponse;
-			if (import.meta.env.DEV) {
-				result = await mockVerify(licenseKey, identity.device_id, deviceName);
-			} else {
-				const resp = await fetch(VERIFY_ENDPOINT, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						licenseKey,
-						hwid: identity.device_id,
-						deviceName,
-						publicKey: identity.public_key_raw,
-					}),
-				});
-				result = await resp.json();
-			}
+			const result = await invoke<VerifyResponse>("tenant_verify", {
+				verifyEndpoint: VERIFY_ENDPOINT,
+				licenseKey,
+				hwid: identity.device_id,
+				deviceName,
+				publicKey: identity.public_key_raw,
+			});
 
 			if (!result.success) {
 				setStatus("unauthorized");
-				setError(t.settings.licenseKeyInvalid);
-				addConnectionLog(
-					"error",
-					"Mate: Tenant verify failed",
-					t.settings.licenseKeyInvalid,
-					["mate", "connection", "tenant", "verify", "failed"],
-				);
+				const errorMessage =
+					extractVerifyError(result) || t.settings.licenseKeyInvalid;
+				setError(errorMessage);
+				addConnectionLog("error", "Mate: Tenant verify failed", errorMessage, [
+					"mate",
+					"connection",
+					"tenant",
+					"verify",
+					"failed",
+				]);
 				return;
 			}
 
@@ -363,37 +357,17 @@ function resolveGatewayWebUI(endpoint: string, token: string): string {
 	}
 }
 
-async function mockVerify(
-	licenseKey: string,
-	hwid: string,
-	deviceName: string,
-): Promise<VerifyResponse> {
-	await new Promise((resolve) => setTimeout(resolve, 800));
-	if (!licenseKey || licenseKey.length < 4) {
-		return {
-			success: false,
-			data: { nodeConfig: {} as never, userProfile: {} as never },
-		};
+function extractVerifyError(response: unknown): string {
+	if (!response || typeof response !== "object") {
+		return "";
 	}
-
-	return {
-		success: true,
-		data: {
-			nodeConfig: {
-				gatewayUrl: "ws://your-cloud-api.com:18789",
-				gatewayWebUI: "http://your-web-ui.com:18789",
-				gatewayToken: `mock-token-${hwid.slice(0, 8)}`,
-				agentId: hwid.slice(0, 16),
-				deviceName,
-			},
-			userProfile: {
-				licenseStatus: "Valid",
-				expiryDate: "2027-01-01",
-			},
-			needsBootstrap: {
-				feishu: false,
-				modelAuth: false,
-			},
-		},
-	};
+	const maybeError = (response as { error?: unknown }).error;
+	if (typeof maybeError === "string" && maybeError.trim()) {
+		return maybeError.trim();
+	}
+	const maybeMessage = (response as { message?: unknown }).message;
+	if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+		return maybeMessage.trim();
+	}
+	return "";
 }

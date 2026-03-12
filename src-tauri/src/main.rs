@@ -111,6 +111,7 @@ fn main() {
             config::get_config,
             config::save_config,
             auth_client::check_auth,
+            auth_client::tenant_verify,
             ws_client::connect_gateway,
             ws_client::disconnect_gateway,
             operator_client::op_connect,
