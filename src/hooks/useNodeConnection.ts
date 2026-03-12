@@ -70,123 +70,128 @@ export function useNodeConnection() {
 		[addClientLog],
 	);
 
-	const verifyAndConnect = useCallback(async () => {
-		if (!licenseKey.trim()) {
-			toast.warning(t.settings.licenseKeyRequired);
-			addConnectionLog(
-				"warning",
-				"Mate: Tenant connect blocked",
-				t.settings.licenseKeyRequired,
-				["mate", "connection", "tenant", "blocked"],
-			);
-			return;
-		}
-
-		try {
-			clearError();
-			setStatus("auth_checking");
-			const identity = await getDeviceIdentity();
-			const deviceName = getDeviceName();
-			addConnectionLog(
-				"info",
-				"Mate: Tenant verify started",
-				`device=${deviceName}`,
-				["mate", "connection", "tenant", "verify"],
-			);
-
-			const result = await invoke<VerifyResponse>("tenant_verify", {
-				verifyEndpoint: VERIFY_ENDPOINT,
-				licenseKey,
-				hwid: identity.device_id,
-				deviceName,
-				publicKey: identity.public_key_raw,
-			});
-
-			if (!result.success) {
-				setStatus("unauthorized");
-				const errorMessage =
-					extractVerifyError(result) || t.settings.licenseKeyInvalid;
-				setError(errorMessage);
-				addConnectionLog("error", "Mate: Tenant verify failed", errorMessage, [
-					"mate",
-					"connection",
-					"tenant",
-					"verify",
-					"failed",
-				]);
-				return;
+	const verifyAndConnect = useCallback(
+		async (overrideLicenseKey?: string) => {
+			const effectiveLicenseKey = (overrideLicenseKey ?? licenseKey).trim();
+			if (!effectiveLicenseKey) {
+				toast.warning(t.settings.licenseKeyRequired);
+				addConnectionLog(
+					"warning",
+					"Mate: Tenant connect blocked",
+					t.settings.licenseKeyRequired,
+					["mate", "connection", "tenant", "blocked"],
+				);
+				return false;
 			}
 
-			const { nodeConfig, userProfile } = result.data;
+			try {
+				clearError();
+				setStatus("auth_checking");
+				const identity = await getDeviceIdentity();
+				const deviceName = getDeviceName();
+				addConnectionLog(
+					"info",
+					"Mate: Tenant verify started",
+					`device=${deviceName}`,
+					["mate", "connection", "tenant", "verify"],
+				);
 
-			if (userProfile.licenseStatus !== "Valid") {
-				setStatus("unauthorized");
-				const errMsg = t.settings.authStatusException
-					.replace("{status}", userProfile.licenseStatus || "-")
-					.replace("{expiry}", userProfile.expiryDate || "-");
-				setError(errMsg);
-				addConnectionLog("error", "Mate: Tenant status invalid", errMsg, [
-					"mate",
-					"connection",
-					"tenant",
-					"unauthorized",
-				]);
-				return;
-			}
-
-			setRuntimeConfig(nodeConfig);
-			setUserProfile(userProfile);
-			if (nodeConfig.licenseId) {
-				setSessionMeta({
-					licenseId: nodeConfig.licenseId,
+				const result = await invoke<VerifyResponse>("tenant_verify", {
+					verifyEndpoint: VERIFY_ENDPOINT,
+					licenseKey: effectiveLicenseKey,
+					hwid: identity.device_id,
+					deviceName,
+					publicKey: identity.public_key_raw,
 				});
-			}
 
-			setStatus("connecting");
-			addConnectionLog(
-				"info",
-				"Mate: Connecting tenant gateway",
-				nodeConfig.gatewayUrl,
-				["mate", "connection", "tenant", "connecting"],
-			);
-			await invoke("connect_gateway", {
-				gatewayUrl: nodeConfig.gatewayUrl,
-				token: nodeConfig.gatewayToken,
-				agentId: nodeConfig.agentId,
-				deviceName: nodeConfig.deviceName,
-				publicKeyRaw: identity.public_key_raw,
-				privateKeyRaw: identity.private_key_raw ?? null,
-			});
-			addConnectionLog(
-				"success",
-				"Mate: Tenant gateway connected",
-				nodeConfig.gatewayUrl,
-				["mate", "connection", "tenant", "connected"],
-			);
-		} catch (e) {
-			const msg = String(e);
-			setError(msg);
-			setStatus("error");
-			addConnectionLog(
-				"error",
-				"Mate: Tenant connect failed",
-				msg || "Unknown error",
-				["mate", "connection", "tenant", "failed"],
-			);
-		}
-	}, [
-		addConnectionLog,
-		clearError,
-		licenseKey,
-		setError,
-		setRuntimeConfig,
-		setSessionMeta,
-		setStatus,
-		setUserProfile,
-		t.settings.authStatusException,
-		t.settings.licenseKeyInvalid,
-		t.settings.licenseKeyRequired,
-	]);
+				if (!result.success) {
+					setStatus("unauthorized");
+					const errorMessage =
+						extractVerifyError(result) || t.settings.licenseKeyInvalid;
+					setError(errorMessage);
+					addConnectionLog(
+						"error",
+						"Mate: Tenant verify failed",
+						errorMessage,
+						["mate", "connection", "tenant", "verify", "failed"],
+					);
+					return false;
+				}
+
+				const { nodeConfig, userProfile } = result.data;
+
+				if (userProfile.licenseStatus !== "Valid") {
+					setStatus("unauthorized");
+					const errMsg = t.settings.authStatusException
+						.replace("{status}", userProfile.licenseStatus || "-")
+						.replace("{expiry}", userProfile.expiryDate || "-");
+					setError(errMsg);
+					addConnectionLog("error", "Mate: Tenant status invalid", errMsg, [
+						"mate",
+						"connection",
+						"tenant",
+						"unauthorized",
+					]);
+					return false;
+				}
+
+				setRuntimeConfig(nodeConfig);
+				setUserProfile(userProfile);
+				if (nodeConfig.licenseId) {
+					setSessionMeta({
+						licenseId: nodeConfig.licenseId,
+					});
+				}
+
+				setStatus("connecting");
+				addConnectionLog(
+					"info",
+					"Mate: Connecting tenant gateway",
+					nodeConfig.gatewayUrl,
+					["mate", "connection", "tenant", "connecting"],
+				);
+				await invoke("connect_gateway", {
+					gatewayUrl: nodeConfig.gatewayUrl,
+					token: nodeConfig.gatewayToken,
+					agentId: nodeConfig.agentId,
+					deviceName: nodeConfig.deviceName,
+					publicKeyRaw: identity.public_key_raw,
+					privateKeyRaw: identity.private_key_raw ?? null,
+				});
+				addConnectionLog(
+					"success",
+					"Mate: Tenant gateway connected",
+					nodeConfig.gatewayUrl,
+					["mate", "connection", "tenant", "connected"],
+				);
+				return true;
+			} catch (e) {
+				const msg = String(e);
+				setError(msg);
+				setStatus("error");
+				addConnectionLog(
+					"error",
+					"Mate: Tenant connect failed",
+					msg || "Unknown error",
+					["mate", "connection", "tenant", "failed"],
+				);
+				return false;
+			}
+		},
+		[
+			addConnectionLog,
+			clearError,
+			licenseKey,
+			setError,
+			setRuntimeConfig,
+			setSessionMeta,
+			setStatus,
+			setUserProfile,
+			t.settings.authStatusException,
+			t.settings.licenseKeyInvalid,
+			t.settings.licenseKeyRequired,
+		],
+	);
 
 	const connectDirectGateway = useCallback(
 		async (opts: DirectGatewayOptions) => {

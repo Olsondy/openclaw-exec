@@ -76,6 +76,7 @@ export function SwitchModeDialog({
 					profile: {
 						gatewayUrl: runtimeConfig.gatewayUrl,
 						gatewayWebUI: runtimeConfig.gatewayWebUI,
+						gatewayToken: runtimeConfig.gatewayToken || null,
 						agentId: runtimeConfig.agentId,
 						deviceName: runtimeConfig.deviceName,
 						lastConnectedAt: new Date().toISOString(),

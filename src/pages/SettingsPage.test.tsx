@@ -5,6 +5,9 @@ import { useConfigStore, useConnectionStore, useTasksStore } from "../store";
 import { SettingsPage } from "./SettingsPage";
 
 const invokeMock = vi.fn().mockResolvedValue(undefined);
+const verifyAndConnectMock = vi.fn().mockResolvedValue(true);
+const connectDirectGatewayMock = vi.fn().mockResolvedValue(true);
+const reconnectCurrentMock = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@tauri-apps/api/core", () => ({
 	invoke: (...args: unknown[]) => invokeMock(...args),
@@ -12,9 +15,9 @@ vi.mock("@tauri-apps/api/core", () => ({
 
 vi.mock("../hooks/useNodeConnection", () => ({
 	useNodeConnection: () => ({
-		verifyAndConnect: vi.fn().mockResolvedValue(undefined),
-		connectDirectGateway: vi.fn().mockResolvedValue(true),
-		reconnectCurrent: vi.fn().mockResolvedValue(undefined),
+		verifyAndConnect: verifyAndConnectMock,
+		connectDirectGateway: connectDirectGatewayMock,
+		reconnectCurrent: reconnectCurrentMock,
 	}),
 }));
 
@@ -23,6 +26,12 @@ describe("SettingsPage breathing indicators", () => {
 		localStorage.clear();
 		invokeMock.mockReset();
 		invokeMock.mockResolvedValue(undefined);
+		verifyAndConnectMock.mockReset();
+		verifyAndConnectMock.mockResolvedValue(true);
+		connectDirectGatewayMock.mockReset();
+		connectDirectGatewayMock.mockResolvedValue(true);
+		reconnectCurrentMock.mockReset();
+		reconnectCurrentMock.mockResolvedValue(undefined);
 		useI18nStore.setState({ locale: "zh", theme: "system" });
 		useConnectionStore.setState({
 			status: "online",
@@ -68,7 +77,9 @@ describe("SettingsPage breathing indicators", () => {
 		render(<SettingsPage />);
 		const directLabel = screen.getByText("直连");
 		fireEvent.click(directLabel.closest("button") as HTMLButtonElement);
-		const localDesc = screen.getByText("自动探测本机已安装的网关");
+		const localDesc = await waitFor(() =>
+			screen.getByText("自动探测本机已安装的网关"),
+		);
 		fireEvent.click(localDesc.closest("button") as HTMLButtonElement);
 
 		await waitFor(() => {
@@ -112,5 +123,46 @@ describe("SettingsPage breathing indicators", () => {
 		});
 		expect(invokeMock).toHaveBeenCalledWith("disconnect_gateway");
 		expect(invokeMock).toHaveBeenCalledWith("op_disconnect");
+	});
+
+	it("restores tenant connection from cached profile", async () => {
+		useConnectionStore.setState({
+			status: "idle",
+			errorMessage: null,
+			onlineAt: null,
+		});
+		useConfigStore.setState({
+			connectionMode: "license",
+			licenseKey: "",
+			directMode: null,
+		});
+		invokeMock.mockImplementation(async (cmd: string) => {
+			if (cmd === "get_license_profile") {
+				return {
+					licenseKey: "RESTORE-XXXX-XXXX-KEY1",
+				};
+			}
+			if (cmd === "get_local_profile") {
+				return null;
+			}
+			return undefined;
+		});
+
+		render(<SettingsPage />);
+		const cloudLabel = screen.getByText("租户");
+		fireEvent.click(cloudLabel.closest("button") as HTMLButtonElement);
+
+		await waitFor(() => {
+			expect(
+				screen.getByDisplayValue("RESTORE-XXXX-XXXX-KEY1"),
+			).toBeInTheDocument();
+		});
+
+		fireEvent.click(screen.getByRole("button", { name: "重连" }));
+		await waitFor(() => {
+			expect(verifyAndConnectMock).toHaveBeenCalledWith(
+				"RESTORE-XXXX-XXXX-KEY1",
+			);
+		});
 	});
 });

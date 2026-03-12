@@ -21,7 +21,7 @@ import {
 	Unplug,
 	X,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { SwitchModeDialog } from "../components/features/settings/SwitchModeDialog";
 import { ApiWizard } from "../components/features/wizard/ApiWizard";
@@ -34,6 +34,23 @@ import { makeLogId } from "../lib/activity-log";
 import { useConfigStore, useConnectionStore, useTasksStore } from "../store";
 import type { ConnectionMode } from "../store/config.store";
 import type { LogLevel } from "../types";
+
+interface LicenseProfileSnapshot {
+	licenseKey: string;
+	licenseId?: number | null;
+	gatewayEndpoint?: string;
+	gatewayWebUI?: string;
+	expiryDate?: string;
+}
+
+interface LocalProfileSnapshot {
+	gatewayUrl: string;
+	gatewayWebUI?: string;
+	gatewayToken?: string | null;
+	agentId?: string;
+	deviceName?: string;
+	lastConnectedAt?: string;
+}
 
 function maskLicenseKey(key: string): string {
 	const parts = key.split("-");
@@ -122,6 +139,10 @@ export function SettingsPage() {
 		toMode: ConnectionMode;
 		openTarget: "license" | "direct";
 	} | null>(null);
+	const [cachedLicenseProfile, setCachedLicenseProfile] =
+		useState<LicenseProfileSnapshot | null>(null);
+	const [cachedLocalProfile, setCachedLocalProfile] =
+		useState<LocalProfileSnapshot | null>(null);
 	const [apiWizardOpen, setApiWizardOpen] = useState(false);
 
 	const isLoading = status === "auth_checking" || status === "connecting";
@@ -131,6 +152,42 @@ export function SettingsPage() {
 	const isLocalConnected = isDirectConnected && directMode === "local";
 	const isCloudConnected = isDirectConnected && directMode === "cloud";
 	const directBusy = directLoading || directActionLoading !== null;
+
+	const isLoopbackGateway = useCallback((endpoint: string): boolean => {
+		const raw = endpoint.trim();
+		if (!raw) return false;
+		const withScheme = /^wss?:\/\//i.test(raw)
+			? raw
+			: /^https?:\/\//i.test(raw)
+				? raw.replace(/^http/i, "ws")
+				: `ws://${raw}`;
+		try {
+			const host = new URL(withScheme).hostname.toLowerCase();
+			return host === "127.0.0.1" || host === "localhost";
+		} catch {
+			return false;
+		}
+	}, []);
+
+	const loadCachedProfiles = useCallback(async () => {
+		const [licenseProfileRaw, localProfileRaw] = await Promise.all([
+			invoke<LicenseProfileSnapshot | null>("get_license_profile").catch(
+				() => null,
+			),
+			invoke<LocalProfileSnapshot | null>("get_local_profile").catch(
+				() => null,
+			),
+		]);
+		const licenseProfile = licenseProfileRaw ?? null;
+		const localProfile = localProfileRaw ?? null;
+		setCachedLicenseProfile(licenseProfile);
+		setCachedLocalProfile(localProfile);
+		return { licenseProfile, localProfile };
+	}, []);
+
+	useEffect(() => {
+		void loadCachedProfiles();
+	}, [loadCachedProfiles]);
 
 	const THEMES: { key: Theme; label: string; icon: React.ElementType }[] = [
 		{ key: "light", label: t.settings.themeLight, icon: Sun },
@@ -176,6 +233,19 @@ export function SettingsPage() {
 		});
 	};
 
+	const applyDirectProfileDraft = (profile: LocalProfileSnapshot | null) => {
+		if (!profile) return;
+		const endpoint = (profile.gatewayUrl || profile.gatewayWebUI || "").trim();
+		if (!endpoint) return;
+		if (isLoopbackGateway(endpoint)) {
+			setDirectTarget(null);
+			return;
+		}
+		setDirectTarget("cloud");
+		setDirectAddress(endpoint);
+		setDirectToken(profile.gatewayToken?.trim() ?? "");
+	};
+
 	const connectDiscoveredLocalGateway = async () => {
 		const result = await invoke<{
 			gateway_url: string;
@@ -218,12 +288,13 @@ export function SettingsPage() {
 
 	const doActivate = async () => {
 		setShowConfirmKey(false);
-		setLicenseKey(newKey.trim());
+		const nextKey = newKey.trim();
+		setLicenseKey(nextKey);
 		await invoke("save_app_config", {
 			config: { connectionMode: "license" },
 		});
 		setConnectionMode("license");
-		await verifyAndConnect();
+		await verifyAndConnect(nextKey);
 	};
 
 	const openDirectModal = () => {
@@ -233,7 +304,7 @@ export function SettingsPage() {
 		setDirectModalOpen(true);
 	};
 
-	const handleLicenseCardClick = () => {
+	const handleLicenseCardClick = async () => {
 		if (connectionMode === "local" && isOnline) {
 			setSwitchModeRequest({
 				fromMode: "local",
@@ -242,10 +313,18 @@ export function SettingsPage() {
 			});
 			return;
 		}
+		let profile = cachedLicenseProfile;
+		if (!profile) {
+			const loaded = await loadCachedProfiles();
+			profile = loaded.licenseProfile;
+		}
+		if (profile?.licenseKey && !newKey.trim()) {
+			setNewKey(profile.licenseKey);
+		}
 		setLicenseModalOpen(true);
 	};
 
-	const handleDirectCardClick = () => {
+	const handleDirectCardClick = async () => {
 		if (connectionMode === "license" && isOnline) {
 			setSwitchModeRequest({
 				fromMode: "license",
@@ -254,7 +333,13 @@ export function SettingsPage() {
 			});
 			return;
 		}
+		let profile = cachedLocalProfile;
+		if (!profile) {
+			const loaded = await loadCachedProfiles();
+			profile = loaded.localProfile;
+		}
 		openDirectModal();
+		applyDirectProfileDraft(profile);
 	};
 
 	const closeDirectModalSuccess = (msg: string) => {
@@ -282,6 +367,7 @@ export function SettingsPage() {
 		);
 		await disconnectGatewaySession();
 		setConnectionMode(target.toMode);
+		const { licenseProfile, localProfile } = await loadCachedProfiles();
 		addDirectActionLog(
 			"success",
 			"Mate: Mode switched",
@@ -297,10 +383,94 @@ export function SettingsPage() {
 		);
 		setSwitchModeRequest(null);
 		if (target.openTarget === "license") {
+			if (licenseProfile?.licenseKey) {
+				setNewKey(licenseProfile.licenseKey);
+			}
 			setLicenseModalOpen(true);
 			return;
 		}
 		openDirectModal();
+		applyDirectProfileDraft(localProfile);
+	};
+
+	const handleRestoreTenantConnection = async () => {
+		const profile = cachedLicenseProfile;
+		if (!profile?.licenseKey?.trim()) {
+			toast.warning(t.settings.reconnectMissing);
+			return;
+		}
+		setNewKey(profile.licenseKey);
+		setLicenseKey(profile.licenseKey);
+		await invoke("save_app_config", {
+			config: { connectionMode: "license" },
+		});
+		setConnectionMode("license");
+		addDirectActionLog(
+			"info",
+			"Mate: Tenant restore requested",
+			profile.licenseKey,
+			["mate", "connection", "tenant", "restore"],
+		);
+		const ok = await verifyAndConnect(profile.licenseKey);
+		if (ok) {
+			setLicenseModalOpen(false);
+			toast.success(t.settings.actionCloudConnected);
+		}
+	};
+
+	const handleRestoreDirectConnection = async () => {
+		const profile = cachedLocalProfile;
+		if (!profile) {
+			toast.warning(t.settings.reconnectMissing);
+			return;
+		}
+		const endpoint = (profile.gatewayUrl || profile.gatewayWebUI || "").trim();
+		if (!endpoint) {
+			toast.warning(t.settings.reconnectMissing);
+			return;
+		}
+		if (isLoopbackGateway(endpoint)) {
+			await handleLocalConnect();
+			return;
+		}
+		setDirectTarget("cloud");
+		setDirectAddress(endpoint);
+		setDirectToken(profile.gatewayToken?.trim() ?? "");
+		setDirectLoading(true);
+		setDirectStatus({
+			level: "info",
+			message: t.settings.actionCloudConnecting,
+		});
+		addDirectActionLog(
+			"info",
+			"Mate: Direct cloud restore requested",
+			endpoint,
+			["mate", "connection", "cloud", "restore"],
+		);
+		try {
+			const normalized = normalizeGatewayEndpoint(endpoint);
+			const ok = await connectDirectGateway({
+				gatewayUrl: normalized.gatewayUrl,
+				gatewayWebUI: normalized.gatewayWebUI,
+				gatewayToken: profile.gatewayToken?.trim() ?? "",
+				profileLabel: t.settings.directCloudGateway,
+			});
+			if (!ok) return;
+			setDirectMode("cloud");
+			setDirectCloudAddress(endpoint);
+			await invoke("save_app_config", {
+				config: { connectionMode: "local" },
+			});
+			setConnectionMode("local");
+			closeDirectModalSuccess(t.settings.actionCloudConnected);
+		} catch (e) {
+			setDirectStatus({
+				level: "error",
+				message: String(e),
+			});
+		} finally {
+			setDirectLoading(false);
+		}
 	};
 
 	const doConnectDirectCloud = async () => {
@@ -873,6 +1043,16 @@ export function SettingsPage() {
 								<span>{errorMessage}</span>
 							</div>
 						)}
+						{cachedLicenseProfile?.licenseKey && (
+							<Button
+								variant="outlined"
+								onClick={handleRestoreTenantConnection}
+								disabled={isLoading}
+								className="w-full"
+							>
+								{t.sidebar.reconnect}
+							</Button>
+						)}
 
 						<Button
 							onClick={() => (hasKey ? setShowConfirmKey(true) : doActivate())}
@@ -935,6 +1115,15 @@ export function SettingsPage() {
 								<p className="text-xs text-surface-on-variant">
 									{t.settings.directSelectHint}
 								</p>
+								{cachedLocalProfile && !directBusy && (
+									<button
+										type="button"
+										onClick={handleRestoreDirectConnection}
+										className="w-full text-xs rounded-lg border border-primary/40 bg-primary/10 text-primary px-3 py-2 hover:bg-primary/15 transition-colors"
+									>
+										{t.sidebar.reconnect}
+									</button>
+								)}
 								<div className="grid grid-cols-2 gap-3">
 									<div
 										className={`rounded-xl border bg-surface flex flex-col transition-all duration-300 ${

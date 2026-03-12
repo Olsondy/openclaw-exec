@@ -76,6 +76,32 @@ Implemented in `src/hooks/useNodeConnection.ts`:
    - `ws:disconnected` -> status `idle`
    - `ws:error` -> set error and status `error`
 
+## Mode Switching and Profile Restore
+
+Mode-switch and reconnect behavior is coordinated by `src/pages/SettingsPage.tsx`
+plus profile persistence commands in `src-tauri/src/profile_store.rs`.
+
+- Profile storage location:
+  - `~/.clatemate/profiles/license.json`
+  - `~/.clatemate/profiles/local.json`
+- Commands used:
+  - `get_license_profile` / `save_license_profile`
+  - `get_local_profile` / `save_local_profile`
+
+Current flow:
+
+1. Settings page loads cached license/local profiles on mount.
+2. If user switches mode while online, app disconnects current gateway session first.
+3. Target mode dialog opens with fields prefilled from cached profile.
+4. User can trigger one-click restore:
+   - Tenant restore: reuses cached license key and calls `verifyAndConnect(licenseKey)`.
+   - Direct restore:
+     - Loopback endpoint (`127.0.0.1` / `localhost`) -> local direct connect.
+     - Non-loopback endpoint -> direct cloud connect with cached address/token.
+
+This keeps tenant/direct flows symmetric and allows reconnect without re-entering
+credentials each time.
+
 ## WebSocket Event Emission
 
 Rust gateway client source: `src-tauri/src/ws_client.rs`
@@ -107,7 +133,9 @@ Frontend trigger source: `src/components/layout/Sidebar.tsx`.
 - `src/hooks/useTauri.ts`
 - `src/store/config.store.ts`
 - `src/store/connection.store.ts`
+- `src/pages/SettingsPage.tsx`
 - `src-tauri/src/auth_client.rs`
 - `src-tauri/src/ws_client.rs`
 - `src-tauri/src/config.rs`
+- `src-tauri/src/profile_store.rs`
 - `src-tauri/src/main.rs`

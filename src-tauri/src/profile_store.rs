@@ -51,6 +51,8 @@ pub struct LicenseProfile {
 pub struct LocalProfile {
     pub gateway_url: String,
     pub gateway_web_ui: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gateway_token: Option<String>,
     pub agent_id: String,
     pub device_name: String,
     pub last_connected_at: String,
