@@ -90,7 +90,7 @@ plus profile persistence commands in `src-tauri/src/profile_store.rs`.
 
 Current flow:
 
-1. Settings page loads cached license/local profiles on mount.
+1. Settings page loads cached tenant/direct profiles on mount.
 2. If user switches mode while online, app disconnects current gateway session first.
 3. Target mode dialog opens with fields prefilled from cached profile.
 4. User can trigger one-click restore:

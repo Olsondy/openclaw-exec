@@ -1,4 +1,3 @@
-export { useBootstrapStore } from "./bootstrap.store";
 export { useConfigStore } from "./config.store";
 export { useConnectionStore } from "./connection.store";
 export { useOperatorStore } from "./operator.store";

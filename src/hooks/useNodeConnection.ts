@@ -285,7 +285,7 @@ export function useNodeConnection() {
 			`mode=${connectionMode}`,
 			["mate", "connection", "reconnect"],
 		);
-		if (connectionMode === "license") {
+		if (connectionMode === "tenant") {
 			await verifyAndConnect();
 			return;
 		}

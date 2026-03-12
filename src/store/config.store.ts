@@ -7,7 +7,7 @@ import type {
 	UserProfile,
 } from "../types";
 
-export type ConnectionMode = "license" | "local";
+export type ConnectionMode = "tenant" | "direct";
 export type DirectMode = "local" | "cloud";
 
 /** 持久化至本地的设置 */

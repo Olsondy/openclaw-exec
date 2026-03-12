@@ -32,7 +32,7 @@ export function SwitchModeDialog({
 	const [confirming, setConfirming] = useState(false);
 	const t = useT();
 
-	const isLicenseToLocal = fromMode === "license" && toMode === "local";
+	const isTenantToDirect = fromMode === "tenant" && toMode === "direct";
 
 	const handleExport = async () => {
 		setExporting(true);
@@ -59,7 +59,7 @@ export function SwitchModeDialog({
 		setConfirming(true);
 		try {
 			// 保存当前 profile 到文件（切回时可复用）
-			if (fromMode === "license" && licenseKey) {
+			if (fromMode === "tenant" && licenseKey) {
 				await invoke("save_license_profile", {
 					profile: {
 						licenseKey,
@@ -71,7 +71,7 @@ export function SwitchModeDialog({
 						approvalRules: approvalRules as unknown as Record<string, string>,
 					},
 				});
-			} else if (fromMode === "local" && runtimeConfig) {
+			} else if (fromMode === "direct" && runtimeConfig) {
 				await invoke("save_local_profile", {
 					profile: {
 						gatewayUrl: runtimeConfig.gatewayUrl,
@@ -111,13 +111,13 @@ export function SwitchModeDialog({
 
 				{/* 说明 */}
 				<p className="text-xs text-surface-on-variant leading-relaxed">
-					{isLicenseToLocal
+					{isTenantToDirect
 						? t.settings.switchModeDescLicenseToLocal
 						: t.settings.switchModeDescLocalToLicense}
 				</p>
 
-				{/* License → Local：导出区域 */}
-				{isLicenseToLocal && (
+				{/* Tenant → Direct：导出区域 */}
+				{isTenantToDirect && (
 					<div className="rounded-lg border border-white/8 bg-surface p-3 space-y-2">
 						<p className="text-xs text-surface-on-variant">
 							{t.settings.switchModeExportSummary}

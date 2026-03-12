@@ -20,6 +20,16 @@ type GatewayEventEnvelope = {
 	event: string;
 	payload: unknown;
 };
+type StoredConnectionMode = ConnectionMode | "license" | "local";
+
+function normalizeConnectionMode(
+	mode: StoredConnectionMode | null | undefined,
+): ConnectionMode | null {
+	if (!mode) return null;
+	if (mode === "license") return "tenant";
+	if (mode === "local") return "direct";
+	return mode;
+}
 
 function AppInner() {
 	const { setConnectionMode } = useConfigStore();
@@ -30,10 +40,11 @@ function AppInner() {
 
 	// 启动时从文件加载 connectionMode
 	useEffect(() => {
-		invoke<{ connectionMode: ConnectionMode | null }>("get_app_config")
+		invoke<{ connectionMode: StoredConnectionMode | null }>("get_app_config")
 			.then(({ connectionMode: mode }) => {
-				setConnectionMode(mode ?? null);
-				if (!mode) setShowWelcome(true);
+				const normalized = normalizeConnectionMode(mode);
+				setConnectionMode(normalized);
+				if (!normalized) setShowWelcome(true);
 			})
 			.catch(() => setShowWelcome(true));
 	}, []);

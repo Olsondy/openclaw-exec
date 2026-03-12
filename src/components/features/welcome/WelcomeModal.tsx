@@ -26,14 +26,14 @@ export function WelcomeModal({ onDone }: Props) {
 		hint: string;
 	}[] = [
 		{
-			mode: "local",
+			mode: "direct",
 			icon: Monitor,
 			title: t.welcome.localTitle,
 			desc: t.welcome.localDesc,
 			hint: t.welcome.localHint,
 		},
 		{
-			mode: "license",
+			mode: "tenant",
 			icon: KeyRound,
 			title: t.welcome.licenseTitle,
 			desc: t.welcome.licenseDesc,

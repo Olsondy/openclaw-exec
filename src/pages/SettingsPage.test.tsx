@@ -50,7 +50,7 @@ describe("SettingsPage breathing indicators", () => {
 				vision: "never",
 			},
 			licenseId: null,
-			connectionMode: "local",
+			connectionMode: "direct",
 			directMode: "local",
 			directCloudAddress: "",
 		});
@@ -102,7 +102,7 @@ describe("SettingsPage breathing indicators", () => {
 			onlineAt: new Date(),
 		});
 		useConfigStore.setState({
-			connectionMode: "license",
+			connectionMode: "tenant",
 			directMode: null,
 			licenseKey: "TEST-XXXX-XXXX-KEY1",
 			expiryDate: "Permanent",
@@ -118,7 +118,7 @@ describe("SettingsPage breathing indicators", () => {
 
 		await waitFor(() => {
 			expect(invokeMock).toHaveBeenCalledWith("save_app_config", {
-				config: { connectionMode: "local" },
+				config: { connectionMode: "direct" },
 			});
 		});
 		expect(invokeMock).toHaveBeenCalledWith("disconnect_gateway");
@@ -132,7 +132,7 @@ describe("SettingsPage breathing indicators", () => {
 			onlineAt: null,
 		});
 		useConfigStore.setState({
-			connectionMode: "license",
+			connectionMode: "tenant",
 			licenseKey: "",
 			directMode: null,
 		});

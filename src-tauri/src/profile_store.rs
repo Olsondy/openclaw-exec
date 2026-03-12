@@ -19,7 +19,7 @@ fn profiles_dir() -> Result<PathBuf, String> {
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AppConfig {
-    /// null = 首次启动未选择，"license" | "local"
+    /// null = 首次启动未选择，"tenant" | "direct"
     pub connection_mode: Option<String>,
 }
 

@@ -137,7 +137,7 @@ export function SettingsPage() {
 	const [switchModeRequest, setSwitchModeRequest] = useState<{
 		fromMode: ConnectionMode;
 		toMode: ConnectionMode;
-		openTarget: "license" | "direct";
+		openTarget: "tenant" | "direct";
 	} | null>(null);
 	const [cachedLicenseProfile, setCachedLicenseProfile] =
 		useState<LicenseProfileSnapshot | null>(null);
@@ -148,7 +148,7 @@ export function SettingsPage() {
 	const isLoading = status === "auth_checking" || status === "connecting";
 	const isOnline = status === "online";
 	const hasKey = Boolean(licenseKey);
-	const isDirectConnected = connectionMode === "local" && isOnline;
+	const isDirectConnected = connectionMode === "direct" && isOnline;
 	const isLocalConnected = isDirectConnected && directMode === "local";
 	const isCloudConnected = isDirectConnected && directMode === "cloud";
 	const directBusy = directLoading || directActionLoading !== null;
@@ -291,9 +291,9 @@ export function SettingsPage() {
 		const nextKey = newKey.trim();
 		setLicenseKey(nextKey);
 		await invoke("save_app_config", {
-			config: { connectionMode: "license" },
+			config: { connectionMode: "tenant" },
 		});
-		setConnectionMode("license");
+		setConnectionMode("tenant");
 		await verifyAndConnect(nextKey);
 	};
 
@@ -305,11 +305,11 @@ export function SettingsPage() {
 	};
 
 	const handleLicenseCardClick = async () => {
-		if (connectionMode === "local" && isOnline) {
+		if (connectionMode === "direct" && isOnline) {
 			setSwitchModeRequest({
-				fromMode: "local",
-				toMode: "license",
-				openTarget: "license",
+				fromMode: "direct",
+				toMode: "tenant",
+				openTarget: "tenant",
 			});
 			return;
 		}
@@ -325,10 +325,10 @@ export function SettingsPage() {
 	};
 
 	const handleDirectCardClick = async () => {
-		if (connectionMode === "license" && isOnline) {
+		if (connectionMode === "tenant" && isOnline) {
 			setSwitchModeRequest({
-				fromMode: "license",
-				toMode: "local",
+				fromMode: "tenant",
+				toMode: "direct",
 				openTarget: "direct",
 			});
 			return;
@@ -382,7 +382,7 @@ export function SettingsPage() {
 			],
 		);
 		setSwitchModeRequest(null);
-		if (target.openTarget === "license") {
+		if (target.openTarget === "tenant") {
 			if (licenseProfile?.licenseKey) {
 				setNewKey(licenseProfile.licenseKey);
 			}
@@ -402,9 +402,9 @@ export function SettingsPage() {
 		setNewKey(profile.licenseKey);
 		setLicenseKey(profile.licenseKey);
 		await invoke("save_app_config", {
-			config: { connectionMode: "license" },
+			config: { connectionMode: "tenant" },
 		});
-		setConnectionMode("license");
+		setConnectionMode("tenant");
 		addDirectActionLog(
 			"info",
 			"Mate: Tenant restore requested",
@@ -459,9 +459,9 @@ export function SettingsPage() {
 			setDirectMode("cloud");
 			setDirectCloudAddress(endpoint);
 			await invoke("save_app_config", {
-				config: { connectionMode: "local" },
+				config: { connectionMode: "direct" },
 			});
-			setConnectionMode("local");
+			setConnectionMode("direct");
 			closeDirectModalSuccess(t.settings.actionCloudConnected);
 		} catch (e) {
 			setDirectStatus({
@@ -492,9 +492,9 @@ export function SettingsPage() {
 			setDirectMode("cloud");
 			setDirectCloudAddress(directAddress.trim());
 			await invoke("save_app_config", {
-				config: { connectionMode: "local" },
+				config: { connectionMode: "direct" },
 			});
-			setConnectionMode("local");
+			setConnectionMode("direct");
 			closeDirectModalSuccess(t.settings.actionCloudConnected);
 		} catch (e) {
 			setDirectStatus({
@@ -551,9 +551,9 @@ export function SettingsPage() {
 			await connectDiscoveredLocalGateway();
 			setDirectMode("local");
 			await invoke("save_app_config", {
-				config: { connectionMode: "local" },
+				config: { connectionMode: "direct" },
 			});
-			setConnectionMode("local");
+			setConnectionMode("direct");
 			closeDirectModalSuccess(t.localConnect.connected);
 		} catch (e) {
 			const msg = String(e);
@@ -597,9 +597,9 @@ export function SettingsPage() {
 			await connectDiscoveredLocalGateway();
 			setDirectMode("local");
 			await invoke("save_app_config", {
-				config: { connectionMode: "local" },
+				config: { connectionMode: "direct" },
 			});
-			setConnectionMode("local");
+			setConnectionMode("direct");
 			closeDirectModalSuccess(t.settings.actionLocalRestarted);
 		} catch (e) {
 			const msg = String(e);
@@ -677,9 +677,9 @@ export function SettingsPage() {
 			setDirectMode("cloud");
 			setDirectCloudAddress(currentAddr);
 			await invoke("save_app_config", {
-				config: { connectionMode: "local" },
+				config: { connectionMode: "direct" },
 			});
-			setConnectionMode("local");
+			setConnectionMode("direct");
 			closeDirectModalSuccess(t.settings.actionCloudRestarted);
 		} catch (e) {
 			setDirectStatus({
@@ -714,12 +714,12 @@ export function SettingsPage() {
 							type="button"
 							onClick={handleDirectCardClick}
 							className={`group relative flex flex-col items-center justify-center text-left rounded-xl border p-3 transition-all duration-300 min-h-[80px] ${
-								connectionMode === "local" && isOnline
+								connectionMode === "direct" && isOnline
 									? activeModeCardClass
 									: "border-card-border bg-card-bg hover:border-primary/30 hover:-translate-y-1 hover:shadow-md"
 							}`}
 						>
-							{connectionMode === "local" && isOnline && (
+							{connectionMode === "direct" && isOnline && (
 								<span className="absolute top-3 right-3 flex h-2.5 w-2.5">
 									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
 									<span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
@@ -730,7 +730,7 @@ export function SettingsPage() {
 								<Cable
 									size={15}
 									className={
-										connectionMode === "local" && isOnline
+										connectionMode === "direct" && isOnline
 											? "text-primary"
 											: "text-surface-on-variant"
 									}
@@ -739,7 +739,7 @@ export function SettingsPage() {
 									{t.settings.local}
 								</span>
 							</div>
-							{connectionMode === "local" && isOnline && directMode && (
+							{connectionMode === "direct" && isOnline && directMode && (
 								<p className="mt-1 text-[11px] text-primary font-medium">
 									{directMode === "local"
 										? t.settings.directLocalGateway
@@ -753,12 +753,12 @@ export function SettingsPage() {
 							type="button"
 							onClick={handleLicenseCardClick}
 							className={`group relative flex flex-col items-center justify-center text-left rounded-xl border p-3 transition-all duration-300 min-h-[80px] ${
-								connectionMode === "license" && isOnline
+								connectionMode === "tenant" && isOnline
 									? activeModeCardClass
 									: "border-card-border bg-card-bg hover:border-primary/30 hover:-translate-y-1 hover:shadow-md"
 							}`}
 						>
-							{connectionMode === "license" && isOnline && (
+							{connectionMode === "tenant" && isOnline && (
 								<span className="absolute top-3 right-3 flex h-2.5 w-2.5">
 									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
 									<span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
@@ -768,7 +768,7 @@ export function SettingsPage() {
 								<Server
 									size={15}
 									className={
-										connectionMode === "license" && isOnline
+										connectionMode === "tenant" && isOnline
 											? "text-primary"
 											: "text-surface-on-variant"
 									}
@@ -777,7 +777,7 @@ export function SettingsPage() {
 									{t.settings.cloud}
 								</span>
 							</div>
-							{connectionMode === "license" && isOnline && hasKey && (
+							{connectionMode === "tenant" && isOnline && hasKey && (
 								<div className="space-y-1 mt-1.5 w-full">
 									<div className="flex justify-between text-[11px]">
 										<span className="text-surface-on-variant">
