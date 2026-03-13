@@ -80,6 +80,7 @@ export type Dict = {
 		loading: string;
 		notConnected: string;
 		notConnectedHint: string;
+		reload: string;
 	};
 	models: {
 		title: string;
@@ -388,6 +389,7 @@ export const zh: Dict = {
 		loading: "加载中...",
 		notConnected: "Gateway 未连接",
 		notConnectedHint: "请先连接到 Gateway 后使用 AI 对话功能",
+		reload: "刷新",
 	},
 
 	// Models

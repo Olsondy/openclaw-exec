@@ -88,6 +88,7 @@ export const en: Dict = {
 		loading: "Loading...",
 		notConnected: "Gateway not connected",
 		notConnectedHint: "Connect to a Gateway to use AI Chat",
+		reload: "Refresh",
 	},
 
 	// Models
