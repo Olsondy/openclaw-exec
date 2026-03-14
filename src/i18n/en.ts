@@ -101,6 +101,13 @@ export const en: Dict = {
 		install: "Install deps",
 		installing: "Installing...",
 		reload: "Reload",
+		statTotal: "total",
+		statAvailable: "available",
+		statDisabled: "disabled",
+		statMissingDeps: "missing deps",
+		missingBins: "Missing bins",
+		missingEnv: "Missing env",
+		missingConfig: "Missing config",
 	},
 
 	// Activity

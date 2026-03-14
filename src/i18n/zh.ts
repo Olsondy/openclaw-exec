@@ -91,6 +91,13 @@ export type Dict = {
 		install: string;
 		installing: string;
 		reload: string;
+		statTotal: string;
+		statAvailable: string;
+		statDisabled: string;
+		statMissingDeps: string;
+		missingBins: string;
+		missingEnv: string;
+		missingConfig: string;
 	};
 	activity: {
 		auditLogs: string;
@@ -392,6 +399,13 @@ export const zh: Dict = {
 		install: "安装依赖",
 		installing: "安装中...",
 		reload: "刷新",
+		statTotal: "总计",
+		statAvailable: "可用",
+		statDisabled: "已禁用",
+		statMissingDeps: "依赖缺失",
+		missingBins: "缺少命令",
+		missingEnv: "缺少环境变量",
+		missingConfig: "缺少配置",
 	},
 
 	// Activity
