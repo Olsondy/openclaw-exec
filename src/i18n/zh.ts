@@ -98,6 +98,16 @@ export type Dict = {
 		missingBins: string;
 		missingEnv: string;
 		missingConfig: string;
+		tabInstalled: string;
+		tabHub: string;
+		hubSearchPlaceholder: string;
+		hubSearch: string;
+		hubSearching: string;
+		hubNoResults: string;
+		hubInstall: string;
+		hubInstalling: string;
+		hubInstalled: string;
+		hubInstallSuccess: string;
 	};
 	activity: {
 		auditLogs: string;
@@ -416,6 +426,16 @@ export const zh: Dict = {
 		missingBins: "缺少命令",
 		missingEnv: "缺少环境变量",
 		missingConfig: "缺少配置",
+		tabInstalled: "已安装",
+		tabHub: "ClawHub",
+		hubSearchPlaceholder: "搜索技能...",
+		hubSearch: "搜索",
+		hubSearching: "搜索中...",
+		hubNoResults: "未找到相关技能",
+		hubInstall: "安装",
+		hubInstalling: "安装中...",
+		hubInstalled: "已安装",
+		hubInstallSuccess: "安装成功，刷新技能列表后生效",
 	},
 
 	// Activity

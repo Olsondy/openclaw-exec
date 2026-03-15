@@ -108,6 +108,16 @@ export const en: Dict = {
 		missingBins: "Missing bins",
 		missingEnv: "Missing env",
 		missingConfig: "Missing config",
+		tabInstalled: "Installed",
+		tabHub: "ClawHub",
+		hubSearchPlaceholder: "Search skills...",
+		hubSearch: "Search",
+		hubSearching: "Searching...",
+		hubNoResults: "No skills found",
+		hubInstall: "Install",
+		hubInstalling: "Installing...",
+		hubInstalled: "Installed",
+		hubInstallSuccess: "Installed successfully, reload skills to apply",
 	},
 
 	// Activity
