@@ -1,7 +1,17 @@
+import type { LucideIcon } from "lucide-react";
+import {
+	Bell,
+	Bot,
+	Headphones,
+	MessageSquare,
+	Phone,
+	Send,
+} from "lucide-react";
 import { useState } from "react";
 import { FeishuWizard } from "../components/features/wizard/FeishuWizard";
 import { TelegramWizard } from "../components/features/wizard/TelegramWizard";
 import { TopBar } from "../components/layout/TopBar";
+import { Button } from "../components/ui";
 import { useT } from "../i18n";
 import { useConnectionStore } from "../store";
 
@@ -17,53 +27,53 @@ type ChannelId =
 
 interface ChannelDef {
 	id: ChannelId;
-	emoji: string;
-	color: string; // Tailwind bg color for icon backdrop
-	textColor: string; // Tailwind text color
-	available: boolean; // has a real wizard
+	icon: LucideIcon;
+	iconBg: string;
+	iconColor: string;
+	available: boolean;
 }
 
 const CHANNELS: ChannelDef[] = [
 	{
 		id: "telegram",
-		emoji: "✈️",
-		color: "bg-sky-500/15",
-		textColor: "text-sky-400",
+		icon: Send,
+		iconBg: "bg-sky-500/10",
+		iconColor: "text-sky-500",
 		available: true,
 	},
 	{
 		id: "discord",
-		emoji: "🎮",
-		color: "bg-violet-500/15",
-		textColor: "text-violet-400",
+		icon: Headphones,
+		iconBg: "bg-violet-500/10",
+		iconColor: "text-violet-500",
 		available: false,
 	},
 	{
 		id: "whatsapp",
-		emoji: "💬",
-		color: "bg-emerald-500/15",
-		textColor: "text-emerald-400",
+		icon: Phone,
+		iconBg: "bg-emerald-500/10",
+		iconColor: "text-emerald-500",
 		available: false,
 	},
 	{
 		id: "feishu",
-		emoji: "🪁",
-		color: "bg-blue-500/15",
-		textColor: "text-blue-400",
+		icon: MessageSquare,
+		iconBg: "bg-blue-500/10",
+		iconColor: "text-blue-500",
 		available: true,
 	},
 	{
 		id: "dingtalk",
-		emoji: "🔔",
-		color: "bg-orange-500/15",
-		textColor: "text-orange-400",
+		icon: Bell,
+		iconBg: "bg-orange-500/10",
+		iconColor: "text-orange-500",
 		available: false,
 	},
 	{
 		id: "qq",
-		emoji: "🐧",
-		color: "bg-indigo-500/15",
-		textColor: "text-indigo-400",
+		icon: Bot,
+		iconBg: "bg-indigo-500/10",
+		iconColor: "text-indigo-500",
 		available: false,
 	},
 ];
@@ -152,18 +162,31 @@ function ChannelCard({
 	comingSoonLabel: string;
 	offlineLabel: string;
 }) {
+	const Icon = channel.icon;
+	const dimmed = !channel.available;
+
 	return (
-		<div className="aspect-square rounded-2xl border border-outline/10 bg-surface hover:border-outline/20 transition-colors flex flex-col items-center justify-between p-5">
+		<div
+			className={`aspect-square rounded-xl border border-card-border bg-surface flex flex-col items-center justify-between p-5 transition-all ${
+				channel.available
+					? "hover:border-primary/30 hover:-translate-y-0.5 hover:shadow-md"
+					: "opacity-60"
+			}`}
+		>
 			{/* Icon */}
 			<div
-				className={`w-12 h-12 rounded-xl ${channel.color} flex items-center justify-center text-2xl`}
+				className={`w-10 h-10 rounded-lg flex items-center justify-center ${channel.iconBg} ${channel.iconColor}`}
 			>
-				{channel.emoji}
+				<Icon size={18} strokeWidth={1.8} />
 			</div>
 
 			{/* Name + Desc */}
 			<div className="text-center space-y-1">
-				<p className="text-sm font-semibold text-surface-on">{name}</p>
+				<p
+					className={`text-sm font-semibold ${dimmed ? "text-surface-on-variant" : "text-surface-on"}`}
+				>
+					{name}
+				</p>
 				<p className="text-[11px] text-surface-on-variant leading-tight">
 					{desc}
 				</p>
@@ -172,21 +195,22 @@ function ChannelCard({
 			{/* Action */}
 			<div className="w-full">
 				{!channel.available ? (
-					<div className="w-full text-center py-1.5 text-[11px] font-medium text-surface-on-variant/50 rounded-lg border border-outline/10 bg-surface-variant/20">
+					<p className="text-center text-[11px] text-surface-on-variant/50">
 						{comingSoonLabel}
-					</div>
+					</p>
 				) : !isOnline ? (
-					<div className="w-full text-center py-1.5 text-[11px] text-surface-on-variant/50 rounded-lg border border-outline/10">
+					<p className="text-center text-[11px] text-surface-on-variant/50">
 						{offlineLabel}
-					</div>
+					</p>
 				) : (
-					<button
-						type="button"
+					<Button
+						variant="outlined"
+						size="sm"
+						className="w-full"
 						onClick={onConfigure}
-						className={`w-full py-1.5 text-[11px] font-medium rounded-lg border transition-colors ${channel.color} ${channel.textColor} border-transparent hover:opacity-80`}
 					>
 						{configureLabel}
-					</button>
+					</Button>
 				)}
 			</div>
 		</div>
