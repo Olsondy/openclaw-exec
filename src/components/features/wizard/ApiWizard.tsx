@@ -10,7 +10,10 @@ interface Props {
 
 // ─── API 格式定义 ────────────────────────────────────────────────
 
-type ApiFormat = "openai-completions" | "anthropic-messages";
+type ApiFormat =
+	| "openai-completions"
+	| "anthropic-messages"
+	| "google-generative-ai";
 
 interface ProviderPreset {
 	id: string;
@@ -78,9 +81,30 @@ const FORMAT_DEFS: Record<ApiFormat, FormatDef> = {
 			{ id: "claude-haiku-4-5-20251001", name: "Claude Haiku 4.5" },
 		],
 	},
+	"google-generative-ai": {
+		label: "Google Gemini",
+		desc: "支持 Gemini 2.0 Flash、Gemini 1.5 Pro 等 Google 系列模型",
+		presets: [
+			{
+				id: "google",
+				label: "Google AI Studio",
+				baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+			},
+		],
+		modelSuggestions: [
+			{ id: "gemini-2.0-flash", name: "Gemini 2.0 Flash" },
+			{ id: "gemini-2.0-flash-lite", name: "Gemini 2.0 Flash Lite" },
+			{ id: "gemini-1.5-pro", name: "Gemini 1.5 Pro" },
+			{ id: "gemini-1.5-flash", name: "Gemini 1.5 Flash" },
+		],
+	},
 };
 
-const API_FORMATS: ApiFormat[] = ["openai-completions", "anthropic-messages"];
+const API_FORMATS: ApiFormat[] = [
+	"openai-completions",
+	"anthropic-messages",
+	"google-generative-ai",
+];
 
 // ─── Wizard ──────────────────────────────────────────────────────
 
@@ -199,7 +223,7 @@ export function ApiWizard({ onSuccess, onClose }: Props) {
 					<p className="text-xs font-medium text-surface-on-variant">
 						接口格式
 					</p>
-					<div className="grid grid-cols-2 gap-2">
+					<div className="grid grid-cols-3 gap-2">
 						{API_FORMATS.map((fmt) => {
 							const def = FORMAT_DEFS[fmt];
 							const isActive = apiFormat === fmt;
