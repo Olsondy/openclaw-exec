@@ -129,6 +129,16 @@ export type Dict = {
 		telegramDesc: string;
 		configureTelegram: string;
 		activateFirst: string;
+		configure: string;
+		comingSoon: string;
+		qq: string;
+		qqDesc: string;
+		dingtalk: string;
+		dingtalkDesc: string;
+		discord: string;
+		discordDesc: string;
+		whatsapp: string;
+		whatsappDesc: string;
 	};
 	welcome: {
 		title: string;
@@ -439,14 +449,22 @@ export const zh: Dict = {
 	// Channel
 	channel: {
 		feishu: "飞书",
-		feishuDesc:
-			"配置飞书 App ID 和 App Secret，启用飞书消息通道后即可通过飞书与 AI 交互。",
+		feishuDesc: "飞书 Bot 消息通道",
 		configureFeishu: "配置飞书",
 		telegram: "Telegram",
-		telegramDesc:
-			"配置 Telegram Bot Token，启用 Telegram 消息通道后即可通过 Telegram 与 AI 交互。",
+		telegramDesc: "Telegram Bot 消息通道",
 		configureTelegram: "配置 Telegram",
-		activateFirst: "当前网关暂未链接。",
+		activateFirst: "请先连接 Gateway",
+		configure: "配置",
+		comingSoon: "即将推出",
+		qq: "QQ",
+		qqDesc: "QQ 机器人消息通道",
+		dingtalk: "钉钉",
+		dingtalkDesc: "钉钉 Bot 消息通道",
+		discord: "Discord",
+		discordDesc: "Discord Bot 消息通道",
+		whatsapp: "WhatsApp",
+		whatsappDesc: "WhatsApp 消息通道",
 	},
 
 	// Welcome

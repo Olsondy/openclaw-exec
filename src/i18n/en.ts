@@ -141,14 +141,22 @@ export const en: Dict = {
 	// Channel
 	channel: {
 		feishu: "Feishu (Lark)",
-		feishuDesc:
-			"Configure Feishu App ID and App Secret to enable the Feishu messaging channel.",
+		feishuDesc: "Feishu Bot messaging",
 		configureFeishu: "Configure Feishu",
 		telegram: "Telegram",
-		telegramDesc:
-			"Configure a Telegram Bot Token to enable the Telegram messaging channel.",
+		telegramDesc: "Telegram Bot messaging",
 		configureTelegram: "Configure Telegram",
-		activateFirst: "The current gateway is not yet connected.",
+		activateFirst: "Gateway not connected",
+		configure: "Configure",
+		comingSoon: "Coming Soon",
+		qq: "QQ",
+		qqDesc: "QQ Bot messaging",
+		dingtalk: "DingTalk",
+		dingtalkDesc: "DingTalk Bot messaging",
+		discord: "Discord",
+		discordDesc: "Discord Bot messaging",
+		whatsapp: "WhatsApp",
+		whatsappDesc: "WhatsApp messaging",
 	},
 
 	// Welcome
